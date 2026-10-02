@@ -13,10 +13,14 @@ import {
   Eye,
   Volume2,
   VolumeX,
+  Mail,
+  RotateCw,
 } from 'lucide-react';
+import HeroVideoCarousel, { CircularPortraitOrbit } from './components/HeroVideoCarousel';
 import {
-  HERO_IMAGE,
+  portfolioVideos,
   SOCIAL_LINKS,
+  EXPERIENCE_PILLARS,
   SERVICES,
   WHY_CHOOSE_ME,
   VIDEO_SHOWCASE,
@@ -30,7 +34,6 @@ function extractYouTubeEmbedUrl(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  // Handle direct 11-char video ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
     return `https://www.youtube.com/embed/${trimmed}?autoplay=1&rel=0`;
   }
@@ -72,11 +75,11 @@ function ResilientImage({ src, alt, className = '', style, fallbackLabel }: Resi
   if (hasError) {
     return (
       <div
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#1c1816] via-[#121318] to-[#0f0f0f] text-center p-6 ${className}`}
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#111214] via-[#0B0B0C] to-[#070707] text-center p-6 ${className}`}
         style={style}
       >
-        <Film className="w-8 h-8 text-[#FF6B35] mb-2 opacity-80" />
-        <span className="text-xs font-medium text-[#CCCCCC]">{fallbackLabel || alt}</span>
+        <Film className="w-8 h-8 text-[#FF6A32] mb-2 opacity-80" />
+        <span className="text-xs font-medium text-[#D6D6D6]">{fallbackLabel || alt}</span>
       </div>
     );
   }
@@ -95,10 +98,12 @@ function ResilientImage({ src, alt, className = '', style, fallbackLabel }: Resi
 
 export default function App() {
   const [activeVideoFilter, setActiveVideoFilter] = useState<
-    'all' | 'hacks-edit' | 'retention' | 'color-sound'
+    'all' | 'hacks-edit' | 'car-speed' | 'sports-brand' | 'documentary'
   >('all');
+  const [showcaseOrbitDirection, setShowcaseOrbitDirection] = useState<1 | -1>(1);
+  const [showcaseHoveredCardId, setShowcaseHoveredCardId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoShowcaseItem | null>(null);
-  const [gradeSplit, setGradeSplit] = useState<number>(78);
+  const [gradeSplit, setGradeSplit] = useState<number>(74);
   const [activeMarkerIdx, setActiveMarkerIdx] = useState<number>(0);
   const [customYoutubeInput, setCustomYoutubeInput] = useState<string>('');
   const [customEmbeds, setCustomEmbeds] = useState<Record<string, string>>({});
@@ -112,6 +117,7 @@ export default function App() {
 
   // Interactive Project Estimator & Contact Copy state
   const [selectedServiceType, setSelectedServiceType] = useState<string>('Short-Form Editing');
+  const [selectedFormatTag, setSelectedFormatTag] = useState<string>('Talking Head');
   const [monthlyVolume, setMonthlyVolume] = useState<'4' | '12' | '24'>('12');
   const [turnaroundSpeed, setTurnaroundSpeed] = useState<'standard' | 'priority'>('standard');
   const [clientName, setClientName] = useState<string>('');
@@ -174,591 +180,517 @@ export default function App() {
     }
   };
 
-  const generatedBriefText = `Hi Deergh! I'd love to collaborate on video editing for my channel.
-• Focus Service: ${selectedServiceType}
+  const handleOpenCarouselProject = (showcaseId: string) => {
+    const found = VIDEO_SHOWCASE.find((v) => v.id === showcaseId) || VIDEO_SHOWCASE[0];
+    setSelectedVideo(found);
+    setActiveMarkerIdx(0);
+  };
+
+  const generatedBriefText = `Hi Deergh! I'd love to collaborate on 9:16 video editing for my channel.
+• Primary Service: ${selectedServiceType}
+• Editing Style / Format: ${selectedFormatTag}
 • Volume: ${monthlyVolume} videos / month
 • Turnaround: ${turnaroundSpeed === 'priority' ? '24h Express Priority' : '24–48h Standard'}
 ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel / Handle: ${clientChannel}\n` : ''}${projectNotes ? `• Project Details: ${projectNotes}` : ''}`.trim();
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-[#CCCCCC] flex flex-col">
-      {/* Top Bar Contract: Strict 1-row, 3-zone header */}
-      <header className="sticky top-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-[#FF6B35]/20 px-6 py-4 no-print">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-6">
-          {/* Zone 1: Single text element wordmark */}
+    <div className="min-h-screen bg-[#070707] text-[#D6D6D6] flex flex-col">
+      {/* Header: Sticky Studio Top Bar */}
+      <header className="sticky top-0 z-40 bg-[#070707]/90 backdrop-blur-xl border-b border-white/[0.08] px-6 py-4 no-print">
+        <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-6">
           <a
             href="#"
-            className="font-display text-xl font-bold tracking-tight text-[#FF6B35] whitespace-nowrap focus-visible:outline-2 focus-visible:outline-[#FF6B35]"
+            className="font-display text-xl font-extrabold tracking-tight text-white hover:text-[#FF6A32] transition-colors whitespace-nowrap"
           >
-            DEERGH
+            DEERGH<span className="text-[#FF6A32]">.</span>
           </a>
 
-          {/* Zone 2: 5 clean text navigation links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#CCCCCC]">
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#D6D6D6]">
             <a
               href="#services"
-              className="hover:text-[#FF6B35] hover:underline underline-offset-8 transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
             >
               Services
             </a>
             <a
+              href="#portfolio"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+            >
+              Portfolio
+            </a>
+            <a
               href="#videos"
-              className="hover:text-[#FF6B35] hover:underline underline-offset-8 transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
             >
               Videos
             </a>
             <a
               href="#process"
-              className="hover:text-[#FF6B35] hover:underline underline-offset-8 transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
             >
-              Process
+              Work Process
             </a>
             <a
-              href="#portfolio"
-              className="hover:text-[#FF6B35] hover:underline underline-offset-8 transition-colors duration-150 whitespace-nowrap"
+              href="#skills"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
             >
-              Portfolio
+              Skills
             </a>
             <a
               href="#contact"
-              className="hover:text-[#FF6B35] hover:underline underline-offset-8 transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
             >
               Contact
             </a>
           </nav>
 
-          {/* Zone 3: 1 primary action */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => scrollToSection('contact')}
-              className="px-5 py-2 text-sm font-semibold bg-[#FF6B35] text-black rounded-md hover:bg-[#E85A2C] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B35]"
+              className="px-5 py-2 text-xs sm:text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
             >
-              Get Started
+              START A PROJECT ↗
             </button>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
-        {/* Hero Section: Split-Screen Hero & Oversized Typographic Impact */}
-        <section className="relative border-b border-[#FF6B35]/15 bg-gradient-to-br from-[#FF6B35]/[0.07] via-[#0f0f0f] to-[#0066FF]/[0.05] py-16 lg:py-24 px-6">
-          <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Bold Typographic Hierarchy & Quantitative Metrics */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex items-center gap-2 text-xs text-[#AAAAAA] font-mono-tabular">
-                <span className="text-[#FF6B35] font-medium">HACKS EDIT Creator</span>
-                <span aria-hidden="true">·</span>
-                <span>Reels / TikToks / Shorts</span>
-                <span aria-hidden="true">·</span>
-                <span>4K 60fps Post-Production</span>
-              </div>
+        {/* Hero with Continuous 3D Circular Orbiting 9:16 Portrait Video Cards */}
+        <HeroVideoCarousel
+          videos={portfolioVideos}
+          onSelectProject={handleOpenCarouselProject}
+          onStartProject={() => scrollToSection('contact')}
+          onViewWork={() => scrollToSection('videos')}
+        />
 
-              <h1 className="font-display text-4xl sm:text-6xl lg:text-[64px] font-bold text-white tracking-tight leading-[1.08]">
-                DEERGH HADIYAL
-              </h1>
+        <div className="section-divider-glow" aria-hidden="true" />
 
-              <p className="text-xl sm:text-2xl lg:text-[26px] text-[#FF6B35] font-semibold leading-snug max-w-2xl">
-                Short-Form Video Editing That Gets Results
-              </p>
-
-              <p className="text-base text-[#AAAAAA] leading-relaxed max-w-[62ch]">
-                Professional video editor specializing in high-performing Reels, TikToks, and Shorts.
-                I transform raw clips into engaging, algorithm-optimized content that captures
-                attention in the first 3 seconds and drives real channel growth.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('contact')}
-                  className="px-7 py-3.5 text-base font-semibold bg-[#FF6B35] text-black rounded-md hover:bg-[#E85A2C] transition-transform duration-150 active:scale-[0.99] whitespace-nowrap cursor-pointer"
-                >
-                  Get Started
-                </button>
-                <a
-                  href={SOCIAL_LINKS.youtubeChannel}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-7 py-3.5 text-base font-semibold bg-transparent text-[#0066FF] border-2 border-[#0066FF] rounded-md hover:bg-[#0066FF]/10 transition-colors duration-150 inline-flex items-center gap-2 whitespace-nowrap"
-                >
-                  <span>View Work on YouTube</span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setSelectedVideo(VIDEO_SHOWCASE[0])}
-                  className="px-5 py-3.5 text-sm font-medium text-[#CCCCCC] hover:text-white transition-colors duration-150 inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
-                >
-                  <Play className="w-4 h-4 text-[#FF6B35] fill-[#FF6B35]" />
-                  <span>Inspect Showreel Breakdown</span>
-                </button>
-              </div>
-
-              {/* Claim-to-Proof Quantitative Metrics Bar */}
-              <div className="pt-6 border-t border-white/10 grid grid-cols-3 gap-6 max-w-xl">
-                <div>
-                  <div className="font-mono-tabular text-2xl sm:text-3xl font-semibold text-white">
-                    0–3s
-                  </div>
-                  <div className="text-xs text-[#999999] mt-1">
-                    Hook Architecture · Visual &amp; Sonic Lock
-                  </div>
-                </div>
-                <div>
-                  <div className="font-mono-tabular text-2xl sm:text-3xl font-semibold text-[#FF6B35]">
-                    24–48h
-                  </div>
-                  <div className="text-xs text-[#999999] mt-1">
-                    Turnaround Window · Frame-Accurate
-                  </div>
-                </div>
-                <div>
-                  <div className="font-mono-tabular text-2xl sm:text-3xl font-semibold text-white">
-                    4K 60p
-                  </div>
-                  <div className="text-xs text-[#999999] mt-1">
-                    Master Delivery · Rec.709 &amp; -14 LUFS
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Visual Showcase Frame with Interactive NLE Scrubber Trigger */}
-            <div className="lg:col-span-5">
-              <div
-                onClick={() => setSelectedVideo(VIDEO_SHOWCASE[0])}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedVideo(VIDEO_SHOWCASE[0]);
-                  }
-                }}
-                className="group relative rounded-2xl overflow-hidden border border-[#FF6B35]/30 bg-[#141414] cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-[#FF6B35]"
-              >
-                <div className="aspect-video relative overflow-hidden">
-                  <ResilientImage
-                    src={HERO_IMAGE}
-                    alt="Deergh Hadiyal Video Editing Suite and Color Grading Workstation"
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                  />
-                  {/* Measured Contrast Scrim */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/20" />
-
-                  {/* Top Timecode & Format Readout (Unboxed clean text) */}
-                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white/90">
-                    <span>REC · 00:00:58:14</span>
-                    <span>HACKS EDIT · MASTER TIMELINE</span>
-                  </div>
-
-                  {/* Center Play Affordance */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-[#FF6B35] text-black flex items-center justify-center shadow-lg transition-transform duration-150 group-hover:scale-110">
-                      <Play className="w-7 h-7 fill-black ml-0.5" />
-                    </div>
-                  </div>
-
-                  {/* Bottom Scrim Overlay Info */}
-                  <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                    <div>
-                      <div className="text-xs text-[#FF6B35] font-semibold">
-                        Interactive Showreel &amp; Color Inspector
-                      </div>
-                      <div className="text-base font-semibold text-white">
-                        Click to inspect timeline cuts &amp; raw-to-graded look
-                      </div>
-                    </div>
-                    <span className="text-xs font-mono-tabular text-[#CCCCCC] whitespace-nowrap">
-                      16:9 &amp; 9:16
-                    </span>
-                  </div>
-                </div>
-
-                {/* Simulated NLE Timeline Footer Bar */}
-                <div className="px-4 py-3 bg-[#121212] border-t border-white/10 flex items-center justify-between text-xs font-mono-tabular text-[#999999]">
-                  <span>V1 · Premiere Pro + After Effects</span>
-                  <span className="text-[#FF6B35]">A1+A2 · -14.0 LUFS Master</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Subtle Editorial Marquee Divider (Portfolio Reference Section 2.B) */}
-        <div
-          aria-hidden="true"
-          className="border-b border-white/10 bg-[#0b0b0b] py-3 overflow-hidden select-none no-print"
-        >
-          <div className="animate-marquee flex items-center gap-8 text-xs font-mono-tabular text-[#888888]">
-            <span>short-form video editing · reels &amp; tiktoks · youtube shorts · hacks edit series · motion graphics · davinci resolve color grading · retention storytelling · thumbnail design ·</span>
-            <span>short-form video editing · reels &amp; tiktoks · youtube shorts · hacks edit series · motion graphics · davinci resolve color grading · retention storytelling · thumbnail design ·</span>
-          </div>
-        </div>
-
-        {/* Services Section (#services) */}
-        <section id="services" className="py-20 px-6 max-w-[1200px] mx-auto">
-          <div className="max-w-2xl mb-12">
-            <p className="text-xs font-mono-tabular text-[#FF6B35] mb-2">
-              Capabilities &amp; Post-Production
-            </p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
-              Services Engineered for Audience Retention
-            </h2>
-            <p className="text-sm sm:text-base text-[#AAAAAA] mt-3 leading-relaxed">
-              Every frame is cut with platform algorithms and human psychology in mind—from the
-              opening 3-second hook to the final seamless loop.
-            </p>
-          </div>
-
-          {/* 6 Services Grid (Single-Elevation Depth, Natural Editorial Numbering) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SERVICES.map((service) => (
-              <div
-                key={service.index}
-                onClick={() => {
-                  setSelectedServiceType(service.title);
-                  scrollToSection('contact');
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedServiceType(service.title);
-                    scrollToSection('contact');
-                  }
-                }}
-                className="group bg-[#FF6B35]/[0.04] border border-[#FF6B35]/20 hover:border-[#FF6B35]/50 hover:bg-[#FF6B35]/[0.08] rounded-xl p-7 transition-all duration-150 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-baseline justify-between mb-4">
-                    <span className="font-mono-tabular text-sm font-semibold text-[#FF6B35]">
-                      {service.index}.
-                    </span>
-                    <span className="font-mono-tabular text-xs text-[#888888]">
-                      {service.turnaround}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-xl font-semibold text-white mb-2.5 group-hover:text-[#FF6B35] transition-colors">
-                    {service.title}
-                  </h3>
-                  <p className="text-sm text-[#999999] leading-relaxed mb-6">
-                    {service.description}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-2 text-xs text-[#CCCCCC]">
-                  <span className="truncate">{service.deliverables}</span>
-                  <ArrowUpRight className="w-4 h-4 text-[#FF6B35] shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Why Choose Me Strip (Separated by whitespace & left accent border as in reference) */}
-          <div className="mt-16 bg-[#0066FF]/[0.05] border-l-4 border-[#0066FF] rounded-r-xl p-8 sm:p-10">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        {/* Experience & Core Formats Strip (Talking Head, Documentary, Speed Ramp, Car Edit, CapCut, HACKS & Sports Brand Page) */}
+        <section className="py-12 px-6 bg-[#070707] border-b border-white/[0.06]">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
-                <p className="text-xs font-mono-tabular text-[#0066FF] mb-1">
-                  The Competitive Advantage
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-1.5">
+                  Specialized 9:16 &amp; Cinematic Formats
                 </p>
-                <h3 className="font-display text-2xl font-bold text-white">Why Choose Me</h3>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-white">
+                  Experience Across DIFFERENT NICHES
+                </h2>
               </div>
-              <p className="text-xs font-mono-tabular text-[#AAAAAA]">
-                YouTube · TikTok · Instagram Reels · Snapchat
-              </p>
+              <span className="text-xs font-mono-tabular text-[#929292]">
+                Premiere Pro • After Effects • DaVinci Resolve • CapCut
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-              {WHY_CHOOSE_ME.map((item, idx) => (
-                <div key={item.title} className="space-y-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h4 className="text-base font-semibold text-white">
-                      <span className="text-[#FF6B35] font-mono-tabular mr-2">
-                        0{idx + 1}.
-                      </span>
-                      {item.title}
-                    </h4>
-                    <span className="text-xs font-mono-tabular text-[#FF6B35] whitespace-nowrap">
-                      {item.metric}
-                    </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {EXPERIENCE_PILLARS.map((exp) => (
+                <div
+                  key={exp.code}
+                  onClick={() => {
+                    setSelectedFormatTag(exp.title);
+                    scrollToSection('contact');
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedFormatTag(exp.title);
+                      scrollToSection('contact');
+                    }
+                  }}
+                  className="group p-5 rounded-2xl bg-[#0B0B0C] border border-white/[0.07] hover:border-[#FF6A32]/40 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-2">
+                      <span>{exp.code}</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </div>
+                    <h3 className="font-display text-lg font-bold text-white group-hover:text-[#FF9A62] transition-colors mb-1.5">
+                      {exp.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#929292] leading-relaxed">
+                      {exp.detail}
+                    </p>
                   </div>
-                  <p className="text-sm text-[#CCCCCC] leading-relaxed pl-6">
-                    {item.description}
-                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Video Showcase Section (#videos) - Dynamic Bento Grid + Lightbox + Live YouTube Embedder */}
+        {/* Services Section (#services) */}
+        <section id="services" className="py-20 px-6 bg-[#070707]">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="max-w-2xl mb-12">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+                Services &amp; Capabilities
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
+                Services
+              </h2>
+              <p className="text-sm sm:text-base text-[#929292] mt-3 leading-relaxed">
+                Every 9:16 vertical frame is cut with platform algorithms and viewer psychology in
+                mind—from talking-head hooks and documentary narratives to high-velocity car speed
+                ramps.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {SERVICES.map((service) => (
+                <div
+                  key={service.index}
+                  onClick={() => {
+                    setSelectedServiceType(service.title);
+                    scrollToSection('contact');
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedServiceType(service.title);
+                      scrollToSection('contact');
+                    }
+                  }}
+                  className="group bg-[#0B0B0C] border border-white/[0.08] hover:border-[#FF6A32]/45 hover:bg-[#111214] rounded-2xl p-7 transition-all duration-200 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-baseline justify-between mb-4">
+                      <span className="font-mono-tabular text-sm font-semibold text-[#FF6A32]">
+                        {service.index}.
+                      </span>
+                      <span className="font-mono-tabular text-xs text-[#929292]">
+                        {service.turnaround}
+                      </span>
+                    </div>
+                    <h3 className="font-display text-xl font-bold text-white mb-2.5 group-hover:text-[#FF9A62] transition-colors">
+                      {service.title}
+                    </h3>
+                    <p className="text-sm text-[#929292] leading-relaxed mb-6">
+                      {service.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/[0.07] flex items-center justify-between gap-2 text-xs text-[#D6D6D6]">
+                    <span className="truncate">{service.deliverables}</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#FF6A32] shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Why Choose Me Strip */}
+            <div className="mt-16 bg-[#0B0B0C] border border-white/[0.08] border-l-4 border-l-[#FF6A32] rounded-2xl p-8 sm:p-10">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+                <div>
+                  <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF9A62] mb-1">
+                    The Studio Standard
+                  </p>
+                  <h3 className="font-display text-2xl font-bold text-white">Why Choose Me</h3>
+                </div>
+                <p className="text-xs font-mono-tabular text-[#929292]">
+                  YouTube Shorts · TikTok · Instagram Reels · Snapchat
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                {WHY_CHOOSE_ME.map((item) => (
+                  <div key={item.title} className="space-y-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h4 className="text-base font-semibold text-white">
+                        <span className="text-[#FF6A32] font-mono-tabular mr-2">✓</span>
+                        {item.title}
+                      </h4>
+                      <span className="text-xs font-mono-tabular text-[#FF9A62] whitespace-nowrap">
+                        {item.metric}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#929292] leading-relaxed pl-5">
+                      {item.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="section-divider-glow" aria-hidden="true" />
+
+        {/* My Professional Portfolio PDF / Dossier Section (#portfolio) */}
+        <section id="portfolio" className="py-20 px-6 bg-[#0B0B0C]">
+          <div className="max-w-[900px] mx-auto text-center">
+            <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+              Credentials &amp; Capabilities Deck
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6">
+              My Professional Portfolio
+            </h2>
+
+            <div className="bg-[#111214] border border-white/10 hover:border-[#FF6A32]/40 transition-colors rounded-2xl p-8 sm:p-12 max-w-[640px] mx-auto shadow-2xl">
+              <div className="text-xs font-mono-tabular text-[#FF9A62] mb-3">
+                DEERGH_HADIYAL_PORTFOLIO · STUDIO DOSSIER
+              </div>
+              <h3 className="font-display text-2xl font-bold text-white mb-3">
+                Download My Portfolio
+              </h3>
+              <p className="text-sm sm:text-base text-[#929292] leading-relaxed mb-8">
+                Access my complete professional portfolio showcasing my services, expertise in
+                Talking Head, Documentary, Speed Ramp, Car Edits, CapCut &amp; After Effects, and
+                contact information. Perfect for sharing with potential clients and collaborators.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={handleTriggerDossierDownload}
+                  className="px-6 py-3.5 text-sm font-semibold bg-[#FF6A32] hover:bg-[#FF9A62] text-[#070707] rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
+                >
+                  {dossierDownloaded ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Portfolio Downloaded</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>Download PDF Portfolio</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDossierOpen(true)}
+                  className="px-6 py-3.5 text-sm font-semibold bg-white/[0.04] text-white border border-white/15 hover:border-[#FF6A32]/50 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
+                >
+                  <Eye className="w-4 h-4 text-[#FF6A32]" />
+                  <span>Preview &amp; Print PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="section-divider-glow" aria-hidden="true" />
+
+        {/* Video Showcase Section (#videos) — Upgraded to 9:16 Portrait Circular Orbit + 9:16 Portrait Showcase Cards */}
         <section
           id="videos"
-          className="py-20 px-6 bg-[#141414] border-y border-[#FF6B35]/15"
+          className="py-20 px-6 relative overflow-hidden"
+          style={{
+            background: `
+              radial-gradient(circle at 50% 28%, rgba(255, 106, 50, 0.14), transparent 46%),
+              #070707
+            `,
+          }}
         >
-          <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
+          <div className="max-w-[1320px] mx-auto">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
               <div className="max-w-2xl">
-                <p className="text-xs font-mono-tabular text-[#FF6B35] mb-2">
-                  Selected Works &amp; Showreel
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+                  9:16 Vertical Showreel &amp; Interactive Orbit
                 </p>
                 <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
                   Video Showcase
                 </h2>
-                <p className="text-sm sm:text-base text-[#AAAAAA] mt-3 leading-relaxed">
-                  Watch my latest work from the{' '}
-                  <span className="text-white font-medium">HACKS EDIT</span> channel. Fast-paced,
-                  engaging content that showcases my editing style and expertise in creating
-                  viral-ready videos. Click any project to inspect the cut breakdown or embed a live
-                  YouTube video.
+                <p className="text-sm sm:text-base text-[#929292] mt-3 leading-relaxed">
+                  Explore my 9:16 portrait edits from the{' '}
+                  <span className="text-white font-medium">HACKS EDIT</span> channel, Talking Head
+                  reels, Speed Ramp Car Edits, Sports Brand Pages, and Vertical Documentaries.
+                  Hover over any orbiting 9:16 card to smoothly zoom in (1.22x) while the circular
+                  motion continues.
                 </p>
               </div>
 
-              {/* Interactive Filter Controls (Functional buttons per Rule 1.A) */}
-              <div className="flex items-center gap-1 p-1 bg-[#0f0f0f] border border-white/10 rounded-lg self-start">
-                {(
-                  [
-                    { id: 'all', label: 'All Work' },
-                    { id: 'hacks-edit', label: 'HACKS EDIT' },
-                    { id: 'retention', label: 'Retention Cuts' },
-                    { id: 'color-sound', label: 'Color & Sound' },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveVideoFilter(tab.id)}
-                    className={`px-3.5 py-2 text-xs font-medium rounded-md transition-colors duration-150 whitespace-nowrap cursor-pointer ${
-                      activeVideoFilter === tab.id
-                        ? 'bg-[#FF6B35] text-black font-semibold'
-                        : 'text-[#AAAAAA] hover:text-white'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              {/* Orbit Direction & Category Filter Controls */}
+              <div className="flex flex-wrap items-center gap-2 self-start">
+                <button
+                  type="button"
+                  onClick={() => setShowcaseOrbitDirection((d) => (d === 1 ? -1 : 1))}
+                  className="px-3.5 py-2 text-xs font-mono-tabular font-medium bg-[#0B0B0C] hover:bg-[#111214] text-[#D6D6D6] hover:text-white border border-white/10 hover:border-[#FF6A32]/50 rounded-xl inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RotateCw className="w-3.5 h-3.5 text-[#FF6A32]" />
+                  <span>Reverse Orbit</span>
+                </button>
+
+                <div className="flex flex-wrap items-center gap-1 p-1 bg-[#0B0B0C] border border-white/10 rounded-xl">
+                  {(
+                    [
+                      { id: 'all', label: 'All 9:16 Reels' },
+                      { id: 'hacks-edit', label: 'HACKS EDIT & Talking Head' },
+                      { id: 'car-speed', label: 'Car Edit & Speed Ramp' },
+                      { id: 'sports-brand', label: 'Sports Brand' },
+                      { id: 'documentary', label: 'Documentary' },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveVideoFilter(tab.id)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer ${
+                        activeVideoFilter === tab.id
+                          ? 'bg-[#FF6A32] text-[#070707] font-semibold'
+                          : 'text-[#929292] hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Bento Showcase Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {filteredVideos.map((video, index) => {
-                const isWide = activeVideoFilter === 'all' && index === 0;
+            {/* Interactive 3D Circular Orbiting 9:16 Portrait Stage inside #videos */}
+            <div className="mb-16">
+              <CircularPortraitOrbit
+                videos={portfolioVideos}
+                onSelectProject={handleOpenCarouselProject}
+                orbitSpeed={0.2}
+                direction={showcaseOrbitDirection}
+                compact
+              />
+            </div>
+
+            {/* 2-Column 16:9 Widescreen Detailed Breakdown Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredVideos.map((video) => {
                 const activeEmbedUrl = customEmbeds[video.id];
+                const isCardHovered = showcaseHoveredCardId === video.id;
+                const isCardDimmed =
+                  showcaseHoveredCardId !== null && showcaseHoveredCardId !== video.id;
 
                 return (
                   <article
                     key={video.id}
-                    className={`${
-                      isWide ? 'lg:col-span-7' : activeVideoFilter === 'all' ? 'lg:col-span-5' : 'lg:col-span-6'
-                    } group rounded-2xl overflow-hidden bg-[#0f0f0f] border border-[#FF6B35]/20 hover:border-[#FF6B35]/50 transition-all duration-200 flex flex-col justify-between`}
+                    onMouseEnter={() => setShowcaseHoveredCardId(video.id)}
+                    onMouseLeave={() =>
+                      setShowcaseHoveredCardId((prev) => (prev === video.id ? null : prev))
+                    }
+                    style={{
+                      transform: isCardHovered
+                        ? 'scale3d(1.03, 1.03, 1) translate3d(0, -4px, 0)'
+                        : 'scale3d(1, 1, 1)',
+                      transition:
+                        'transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 350ms ease, filter 350ms ease, border-color 350ms ease',
+                      opacity: isCardDimmed ? 0.65 : 1,
+                      zIndex: isCardHovered ? 30 : 1,
+                    }}
+                    className="group relative rounded-[22px] overflow-hidden bg-[#0B0B0C] border border-white/[0.09] hover:border-[#FF6A32]/60 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85)] flex flex-col justify-between"
                   >
-                    <div>
-                      {/* Media Container */}
-                      <div className="relative aspect-video bg-black overflow-hidden">
-                        {activeEmbedUrl ? (
-                          <iframe
-                            src={activeEmbedUrl}
-                            title={video.title}
-                            className="w-full h-full border-0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        ) : (
-                          <div
-                            onClick={() => {
+                    {/* 16:9 Widescreen Video Container */}
+                    <div
+                      style={{ aspectRatio: '16 / 9' }}
+                      className="relative w-full aspect-video bg-black overflow-hidden"
+                    >
+                      {activeEmbedUrl ? (
+                        <iframe
+                          src={activeEmbedUrl}
+                          title={video.title}
+                          className="w-full h-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <div
+                          onClick={() => {
+                            setSelectedVideo(video);
+                            setActiveMarkerIdx(0);
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
                               setSelectedVideo(video);
                               setActiveMarkerIdx(0);
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                setSelectedVideo(video);
-                                setActiveMarkerIdx(0);
-                              }
-                            }}
-                            className="w-full h-full relative cursor-pointer"
-                          >
-                            <ResilientImage
-                              src={video.thumbnail}
-                              alt={video.title}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              style={{ filter: video.colorFilterGraded }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                            }
+                          }}
+                          className="w-full h-full relative cursor-pointer"
+                        >
+                          <video
+                            src={video.videoSrc}
+                            poster={video.thumbnail}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/30" />
 
-                            {/* Top Metadata Line (Unboxed text with middot separators) */}
-                            <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white/90">
-                              <span>
-                                {video.categoryLabel} · {video.resolution} · {video.fps}
-                              </span>
-                              <span>{video.duration}</span>
-                            </div>
+                          {/* Top 16:9 Metadata Badge */}
+                          <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between text-[11px] font-mono-tabular text-white/90">
+                            <span className="bg-black/65 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 truncate max-w-[75%]">
+                              {video.categoryLabel}
+                            </span>
+                            <span className="bg-[#FF6A32] text-[#070707] font-bold px-2.5 py-0.5 rounded-full">
+                              16:9
+                            </span>
+                          </div>
 
-                            {/* Play / Inspect Button Overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-14 h-14 rounded-full bg-[#FF6B35] text-black flex items-center justify-center shadow-md transition-transform duration-150 group-hover:scale-110">
-                                <Play className="w-6 h-6 fill-black ml-0.5" />
-                              </div>
-                            </div>
-
-                            {/* Bottom Telemetry Overlay */}
-                            <div className="absolute bottom-3.5 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-[#CCCCCC]">
-                              <span>3s Hook Hold: {video.hookRate}</span>
-                              <span className="text-[#FF6B35]">
-                                Avg. Retention: {video.avgRetention}
-                              </span>
+                          {/* Center Play / Inspect Button */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-14 h-14 rounded-full bg-[#FF6A32]/95 text-[#070707] flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110">
+                              <Play className="w-6 h-6 fill-[#070707] ml-0.5" />
                             </div>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Card Body */}
-                      <div className="p-6">
-                        <div className="flex items-center gap-2 text-xs text-[#888888] font-mono-tabular mb-2">
-                          <span>{video.softwareUsed}</span>
+                          {/* Bottom Hook & Retention Metrics Inside 16:9 Frame */}
+                          <div className="absolute bottom-3.5 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-[#FF9A62]">
+                            <span className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded border border-white/10">
+                              3s Hook: {video.hookRate}
+                            </span>
+                            <span className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded border border-white/10">
+                              Retention: {video.avgRetention}
+                            </span>
+                          </div>
                         </div>
-                        <h3 className="font-display text-xl font-bold text-white mb-1.5">
-                          {video.title}
-                        </h3>
-                        <p className="text-sm text-[#FF6B35] font-medium mb-3">
-                          {video.subtitle}
-                        </p>
-                        <p className="text-sm text-[#999999] leading-relaxed">
-                          {video.description}
-                        </p>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Card Footer Actions */}
-                    <div className="px-6 py-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 bg-[#121212]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedVideo(video);
-                          setActiveMarkerIdx(0);
-                        }}
-                        className="text-xs font-semibold text-white hover:text-[#FF6B35] inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
-                      >
-                        <Sliders className="w-3.5 h-3.5 text-[#FF6B35]" />
-                        <span>Open Edit &amp; Color Inspector</span>
-                      </button>
-
-                      <a
-                        href={video.defaultYoutubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-semibold text-[#0066FF] hover:underline inline-flex items-center gap-1 whitespace-nowrap"
-                      >
-                        <span>Watch on @deerghhadiyal</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                    {/* Card Details Body Below 16:9 Player */}
+                    <div
+                      onClick={() => {
+                        setSelectedVideo(video);
+                        setActiveMarkerIdx(0);
+                      }}
+                      className="p-6 space-y-2.5 cursor-pointer"
+                    >
+                      <h3 className="font-display text-lg sm:text-xl font-bold text-white leading-snug group-hover:text-[#FF9A62] transition-colors">
+                        {video.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[#929292] leading-relaxed">
+                        {video.description}
+                      </p>
+                      <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-semibold text-[#FF6A32]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Sliders className="w-3.5 h-3.5" />
+                          <span>Inspect Cut Breakdown</span>
+                        </span>
+                        <span className="font-mono-tabular text-[#D6D6D6]">{video.duration}</span>
+                      </div>
                     </div>
                   </article>
                 );
               })}
-
-              {/* Interactive Before/After Color & Retention Comparison Card in the Bento Grid */}
-              {activeVideoFilter === 'all' && (
-                <div className="lg:col-span-7 rounded-2xl bg-[#0f0f0f] border border-[#0066FF]/30 p-6 sm:p-8 flex flex-col justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                      <span className="text-xs font-mono-tabular text-[#0066FF]">
-                        Interactive Look Development · DaVinci Resolve Pipeline
-                      </span>
-                      <span className="text-xs font-mono-tabular text-[#AAAAAA]">
-                        Drag slider: {gradeSplit}% Graded Look
-                      </span>
-                    </div>
-                    <h3 className="font-display text-2xl font-bold text-white mb-2">
-                      Before &amp; After: Flat Camera Log vs. Viral Master Grade
-                    </h3>
-                    <p className="text-sm text-[#999999] mb-6 max-w-2xl">
-                      Compare ungraded flat camera footage against the final high-contrast color
-                      grade and kinetic polish applied to every HACKS EDIT upload.
-                    </p>
-
-                    {/* Interactive Split Image Container */}
-                    <div className="relative aspect-video rounded-xl overflow-hidden select-none border border-white/10">
-                      {/* Raw Log Base Layer */}
-                      <ResilientImage
-                        src={VIDEO_SHOWCASE[2].thumbnail}
-                        alt="Raw Flat Log Footage"
-                        className="w-full h-full object-cover"
-                        style={{
-                          filter: 'saturate(0.38) contrast(0.78) brightness(0.95)',
-                        }}
-                      />
-                      {/* Graded Clipped Layer */}
-                      <div
-                        className="absolute inset-0 overflow-hidden"
-                        style={{ clipPath: `inset(0 ${100 - gradeSplit}% 0 0)` }}
-                      >
-                        <ResilientImage
-                          src={VIDEO_SHOWCASE[2].thumbnail}
-                          alt="Final Graded Footage"
-                          className="w-full h-full object-cover"
-                          style={{
-                            filter: 'saturate(1.28) contrast(1.18) brightness(1.04)',
-                          }}
-                        />
-                      </div>
-
-                      {/* Vertical Divider Line */}
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-[#FF6B35] shadow-[0_0_12px_#FF6B35]"
-                        style={{ left: `${gradeSplit}%` }}
-                      />
-
-                      {/* Corner Labels */}
-                      <div className="absolute top-3 left-3 text-xs font-mono-tabular text-white bg-black/70 px-2.5 py-1 rounded">
-                        FINAL GRADE · Rec.709 + Halation
-                      </div>
-                      <div className="absolute top-3 right-3 text-xs font-mono-tabular text-[#CCCCCC] bg-black/70 px-2.5 py-1 rounded">
-                        RAW S-Log3 · Flat Profile
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Range Slider Control */}
-                  <div className="mt-6 flex items-center gap-4">
-                    <span className="text-xs font-mono-tabular text-[#888888] whitespace-nowrap">
-                      0% Raw
-                    </span>
-                    <input
-                      type="range"
-                      min={5}
-                      max={95}
-                      value={gradeSplit}
-                      onChange={(e) => setGradeSplit(Number(e.target.value))}
-                      aria-label="Color grade comparison slider"
-                      className="w-full accent-[#FF6B35] cursor-pointer"
-                    />
-                    <span className="text-xs font-mono-tabular text-[#FF6B35] whitespace-nowrap">
-                      100% Graded
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Channel CTA Footer */}
-            <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-[#AAAAAA]">
-                Want to see the full catalog of uploads and Shorts? Visit my official YouTube
-                channel.
+            <div className="mt-12 pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-sm text-[#929292]">
+                Want to see more 9:16 Shorts and Reels? Visit my YouTube channel for the complete
+                collection.
               </p>
               <a
                 href={SOCIAL_LINKS.youtubeChannel}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 text-sm font-semibold bg-[#FF6B35] text-black rounded-md hover:bg-[#E85A2C] transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                className="px-6 py-3 text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center gap-2 whitespace-nowrap"
               >
                 <span>Visit YouTube Channel (@deerghhadiyal)</span>
                 <ArrowUpRight className="w-4 h-4" />
@@ -767,12 +699,14 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
           </div>
         </section>
 
-        {/* My Work Process & Technical Skills Section (#process) */}
-        <section id="process" className="py-20 px-6 max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="section-divider-glow" aria-hidden="true" />
+
+        {/* My Work Process & Technical Skills Section (#process & #skills) */}
+        <section id="process" className="py-20 px-6 bg-[#0B0B0C]">
+          <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* Left 7 Cols: My Work Process */}
             <div className="lg:col-span-7">
-              <p className="text-xs font-mono-tabular text-[#FF6B35] mb-2">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
                 Post-Production Methodology
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-8">
@@ -783,21 +717,21 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 {WORK_PROCESS.map((step) => (
                   <div
                     key={step.index}
-                    className="bg-[#FF6B35]/[0.04] border border-[#FF6B35]/20 hover:bg-[#FF6B35]/[0.08] transition-colors rounded-xl p-7"
+                    className="bg-[#111214] border border-white/[0.08] hover:border-[#FF6A32]/35 transition-colors rounded-2xl p-7"
                   >
-                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6B35] mb-2">
+                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-2">
                       <span>
                         {step.index} · {step.label}
                       </span>
-                      <span className="text-[#AAAAAA]">{step.targetOutcome}</span>
+                      <span className="text-[#929292]">{step.targetOutcome}</span>
                     </div>
                     <h3 className="font-display text-xl font-bold text-white mb-2">
                       {step.title}
                     </h3>
-                    <p className="text-sm text-[#999999] leading-relaxed mb-4">
+                    <p className="text-sm text-[#929292] leading-relaxed mb-4">
                       {step.description}
                     </p>
-                    <div className="text-xs font-mono-tabular text-[#CCCCCC] pt-3 border-t border-white/10">
+                    <div className="text-xs font-mono-tabular text-[#D6D6D6] pt-3 border-t border-white/[0.07]">
                       Techniques: {step.keyTechniques}
                     </div>
                   </div>
@@ -805,20 +739,20 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               </div>
             </div>
 
-            {/* Right 5 Cols: Technical Skills & Stack (Zero-Pill Unboxed Metadata Discipline) */}
-            <div className="lg:col-span-5 flex flex-col justify-between">
+            {/* Right 5 Cols: Technical Skills (#skills) */}
+            <div id="skills" className="lg:col-span-5 flex flex-col justify-between">
               <div>
-                <p className="text-xs font-mono-tabular text-[#0066FF] mb-2">
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF9A62] mb-2">
                   Tools &amp; Ecosystem
                 </p>
                 <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-8">
                   Technical Skills
                 </h2>
 
-                <div className="space-y-8 border-t border-white/10 pt-6">
+                <div className="space-y-8 border-t border-white/[0.08] pt-6">
                   {TECHNICAL_SKILLS.map((group) => (
-                    <div key={group.category} className="border-b border-white/10 pb-6">
-                      <h3 className="text-sm font-mono-tabular font-semibold text-[#FF6B35] mb-2">
+                    <div key={group.category} className="border-b border-white/[0.08] pb-6">
+                      <h3 className="text-sm font-mono-tabular font-semibold text-[#FF6A32] mb-2">
                         {group.category}
                       </h3>
                       <p className="text-base text-white leading-relaxed">
@@ -826,8 +760,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                           <React.Fragment key={item}>
                             <span>{item}</span>
                             {i < group.items.length - 1 && (
-                              <span className="mx-2.5 text-[#FF6B35]" aria-hidden="true">
-                                ·
+                              <span className="mx-2.5 text-[#FF6A32]" aria-hidden="true">
+                                •
                               </span>
                             )}
                           </React.Fragment>
@@ -838,137 +772,89 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 </div>
               </div>
 
-              {/* Delivery Specifications Summary */}
-              <div className="mt-8 p-6 rounded-xl bg-[#141414] border border-white/10">
-                <div className="text-xs font-mono-tabular text-[#FF6B35] mb-2">
-                  Standard Master Delivery Specs
+              <div className="mt-8 p-6 rounded-2xl bg-[#111214] border border-white/[0.08]">
+                <div className="text-xs font-mono-tabular text-[#FF6A32] mb-2">
+                  Master Output Standards
                 </div>
-                <p className="text-sm text-[#CCCCCC] leading-relaxed">
-                  H.264 / Apple ProRes 422 HQ · 1080x1920 (9:16 Vertical) &amp; 3840x2160 (16:9
-                  UHD) · Rec.709 Color Space · -14 LUFS Normalized Stereo Master
+                <p className="text-sm text-[#D6D6D6] leading-relaxed">
+                  H.264 / Apple ProRes 422 HQ · 1080x1920 (9:16 Vertical Portrait) · Rec.709 Color
+                  Space · -14 LUFS Normalized Stereo Master
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* My Professional Portfolio PDF / Dossier Section (#portfolio) */}
-        <section
-          id="portfolio"
-          className="py-20 px-6 bg-gradient-to-br from-[#0066FF]/[0.08] via-[#0f0f0f] to-[#FF6B35]/[0.05] border-y border-[#0066FF]/25"
-        >
-          <div className="max-w-[900px] mx-auto text-center">
-            <p className="text-xs font-mono-tabular text-[#0066FF] mb-2">
-              Shareable Credentials &amp; Capabilities Deck
-            </p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6">
-              My Professional Portfolio
-            </h2>
+        <div className="section-divider-glow" aria-hidden="true" />
 
-            <div className="bg-[#0066FF]/[0.07] border-2 border-[#0066FF]/35 rounded-2xl p-8 sm:p-12 max-w-[640px] mx-auto">
-              <div className="text-xs font-mono-tabular text-[#CCCCCC] mb-3">
-                DEERGH_HADIYAL_PORTFOLIO · 2026 EDITION
-              </div>
-              <h3 className="font-display text-2xl font-bold text-white mb-3">
-                Download My Portfolio Dossier
-              </h3>
-              <p className="text-sm sm:text-base text-[#AAAAAA] leading-relaxed mb-8">
-                Access my complete professional portfolio showcasing my services, expertise,
-                technical skills, and contact information. Perfect for sharing with potential
-                clients, creative directors, and collaborators.
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={handleTriggerDossierDownload}
-                  className="px-6 py-3.5 text-sm font-semibold bg-[#0066FF] hover:bg-[#0055CC] text-white rounded-md transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
-                >
-                  {dossierDownloaded ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Portfolio Dossier Downloaded</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      <span>Download Portfolio Dossier</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsDossierOpen(true)}
-                  className="px-6 py-3.5 text-sm font-semibold bg-transparent text-white border border-white/20 hover:border-white/50 rounded-md transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-[#FF6B35]" />
-                  <span>Preview &amp; Print PDF</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Contact & Interactive Project Scope Section (#contact) */}
-        <section
-          id="contact"
-          className="py-20 px-6 bg-gradient-to-br from-[#FF6B35]/[0.08] via-[#0f0f0f] to-[#0066FF]/[0.05]"
-        >
+        {/* Contact Section (#contact) */}
+        <section id="contact" className="py-20 px-6 bg-[#070707]">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Left 5 Cols: Direct Social Channels & Copy Controls */}
+            {/* Left 5 Cols: Direct Contact & Social Links */}
             <div className="lg:col-span-5 space-y-6">
-              <p className="text-xs font-mono-tabular text-[#FF6B35]">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32]">
                 Direct Channels &amp; Collaborations
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
                 Let&apos;s Create Together
               </h2>
-              <p className="text-base text-[#AAAAAA] leading-relaxed">
+              <p className="text-base text-[#929292] leading-relaxed">
                 Ready to transform your video content and grow your audience? Reach out through my
-                social channels or configure your project brief to discuss how I can help take your
-                channel to the next level.
+                email or social channels and let&apos;s discuss how I can help take your channel to
+                the next level.
               </p>
 
-              {/* Social Channel Links List (Matching Reference Links + Copy Affordance) */}
               <div className="space-y-3 pt-2">
                 {[
+                  {
+                    id: 'email-direct',
+                    label: 'Email Address',
+                    value: SOCIAL_LINKS.email,
+                    href: `mailto:${SOCIAL_LINKS.email}`,
+                    copyValue: SOCIAL_LINKS.email,
+                  },
                   {
                     id: 'yt-main',
                     label: 'YouTube Channel',
                     value: '@deerghhadiyal',
                     href: SOCIAL_LINKS.youtubeChannel,
+                    copyValue: SOCIAL_LINKS.youtubeChannel,
                   },
                   {
                     id: 'yt-hacks',
                     label: 'HACKS EDIT Series',
                     value: 'youtube.com/@deerghhadiyal',
                     href: SOCIAL_LINKS.youtubeChannel,
+                    copyValue: SOCIAL_LINKS.youtubeChannel,
                   },
                   {
                     id: 'ig-main',
-                    label: 'Instagram Handle',
+                    label: 'Instagram',
                     value: '@deergh_hadiyal',
                     href: SOCIAL_LINKS.instagramUrl,
+                    copyValue: SOCIAL_LINKS.instagramUrl,
                   },
                   {
                     id: 'ig-profile',
                     label: 'Instagram Profile',
                     value: 'instagram.com/deergh_hadiyal',
                     href: SOCIAL_LINKS.instagramUrl,
+                    copyValue: SOCIAL_LINKS.instagramUrl,
                   },
                 ].map((channel) => (
                   <div
                     key={channel.id}
-                    className="flex items-center justify-between gap-3 p-4 rounded-xl bg-[#141414] border border-white/10 hover:border-[#0066FF]/40 transition-colors"
+                    className="flex items-center justify-between gap-3 p-4 rounded-xl bg-[#0B0B0C] border border-white/[0.08] hover:border-[#FF6A32]/40 transition-colors"
                   >
                     <div className="min-w-0">
-                      <div className="text-xs text-[#888888]">{channel.label}</div>
+                      <div className="text-xs text-[#929292]">{channel.label}</div>
                       <a
                         href={channel.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm sm:text-base font-semibold text-[#0066FF] hover:underline truncate block"
+                        target={channel.href.startsWith('mailto:') ? undefined : '_blank'}
+                        rel={
+                          channel.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'
+                        }
+                        className="text-sm sm:text-base font-semibold text-white hover:text-[#FF6A32] truncate block transition-colors"
                       >
                         {channel.value}
                       </a>
@@ -977,30 +863,35 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleCopyText(channel.id, channel.href)}
-                        className="px-3 py-1.5 text-xs font-medium text-[#CCCCCC] hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                        title="Copy link to clipboard"
+                        onClick={() => handleCopyText(channel.id, channel.copyValue)}
+                        className="px-3 py-1.5 text-xs font-medium text-[#D6D6D6] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                       >
                         {copiedKey === channel.id ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-[#FF6B35]" />
-                            <span className="text-[#FF6B35]">Copied</span>
+                            <Check className="w-3.5 h-3.5 text-[#FF6A32]" />
+                            <span className="text-[#FF6A32]">Copied</span>
                           </>
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            <span>Copy Link</span>
+                            <span>Copy</span>
                           </>
                         )}
                       </button>
                       <a
                         href={channel.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 text-[#CCCCCC] hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors"
+                        target={channel.href.startsWith('mailto:') ? undefined : '_blank'}
+                        rel={
+                          channel.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'
+                        }
+                        className="p-2 text-[#D6D6D6] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] rounded-md transition-colors"
                         aria-label={`Open ${channel.label}`}
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        {channel.href.startsWith('mailto:') ? (
+                          <Mail className="w-4 h-4" />
+                        ) : (
+                          <ExternalLink className="w-4 h-4" />
+                        )}
                       </a>
                     </div>
                   </div>
@@ -1009,26 +900,47 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             </div>
 
             {/* Right 7 Cols: Interactive Project Brief Builder */}
-            <div className="lg:col-span-7 bg-[#141414] border border-[#FF6B35]/25 rounded-2xl p-6 sm:p-8">
+            <div className="lg:col-span-7 bg-[#0B0B0C] border border-white/10 rounded-2xl p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <div className="text-xs font-mono-tabular text-[#FF6B35]">
-                    Interactive Scope Estimator
+                  <div className="text-xs font-mono-tabular text-[#FF6A32]">
+                    Interactive Project Planner
                   </div>
                   <h3 className="font-display text-2xl font-bold text-white">
-                    Build Your Edit Package Brief
+                    Start a Project With Deergh
                   </h3>
                 </div>
-                <span className="text-xs font-mono-tabular text-[#999999]">
-                  Instant DM / Inquiry Ready
+                <span className="text-xs font-mono-tabular text-[#929292]">
+                  Email &amp; Instagram DM Ready
                 </span>
               </div>
 
               <div className="space-y-6">
-                {/* Service Type Selector */}
                 <div>
-                  <label className="block text-xs font-mono-tabular text-[#AAAAAA] mb-2">
-                    01. Select Primary Service
+                  <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                    01. Select Editing Format
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {EXPERIENCE_PILLARS.map((exp) => (
+                      <button
+                        key={exp.title}
+                        type="button"
+                        onClick={() => setSelectedFormatTag(exp.title)}
+                        className={`px-3 py-2.5 text-xs font-medium rounded-lg border text-left transition-colors cursor-pointer truncate ${
+                          selectedFormatTag === exp.title
+                            ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
+                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                        }`}
+                      >
+                        {exp.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                    02. Select Primary Service
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {SERVICES.map((s) => (
@@ -1038,8 +950,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setSelectedServiceType(s.title)}
                         className={`px-3 py-2.5 text-xs font-medium rounded-lg border text-left transition-colors cursor-pointer truncate ${
                           selectedServiceType === s.title
-                            ? 'bg-[#FF6B35] text-black border-[#FF6B35] font-semibold'
-                            : 'bg-[#0f0f0f] text-[#CCCCCC] border-white/10 hover:border-white/30'
+                            ? 'bg-white text-[#070707] border-white font-semibold'
+                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
                         }`}
                       >
                         {s.title}
@@ -1048,11 +960,10 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
                 </div>
 
-                {/* Volume & Turnaround */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono-tabular text-[#AAAAAA] mb-2">
-                      02. Monthly Video Volume
+                    <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                      03. Monthly Video Volume
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {(
@@ -1068,8 +979,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                           onClick={() => setMonthlyVolume(opt.val)}
                           className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                             monthlyVolume === opt.val
-                              ? 'bg-[#0066FF] text-white border-[#0066FF] font-semibold'
-                              : 'bg-[#0f0f0f] text-[#CCCCCC] border-white/10 hover:border-white/30'
+                              ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
+                              : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
                           }`}
                         >
                           {opt.label}
@@ -1079,8 +990,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono-tabular text-[#AAAAAA] mb-2">
-                      03. Delivery Cadence
+                    <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                      04. Delivery Cadence
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -1088,8 +999,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setTurnaroundSpeed('standard')}
                         className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                           turnaroundSpeed === 'standard'
-                            ? 'bg-[#0066FF] text-white border-[#0066FF] font-semibold'
-                            : 'bg-[#0f0f0f] text-[#CCCCCC] border-white/10 hover:border-white/30'
+                            ? 'bg-white text-[#070707] border-white font-semibold'
+                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
                         }`}
                       >
                         24–48h Standard
@@ -1099,8 +1010,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setTurnaroundSpeed('priority')}
                         className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                           turnaroundSpeed === 'priority'
-                            ? 'bg-[#FF6B35] text-black border-[#FF6B35] font-semibold'
-                            : 'bg-[#0f0f0f] text-[#CCCCCC] border-white/10 hover:border-white/30'
+                            ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
+                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
                         }`}
                       >
                         24h Express
@@ -1109,12 +1020,11 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
                 </div>
 
-                {/* Optional Creator Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label
                       htmlFor="creator-name"
-                      className="block text-xs font-mono-tabular text-[#AAAAAA] mb-1.5"
+                      className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
                     >
                       Your Name / Brand
                     </label>
@@ -1124,13 +1034,13 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="e.g., Alex Rivera"
-                      className="w-full px-3.5 py-2.5 text-sm bg-[#0f0f0f] border border-white/15 rounded-lg text-white placeholder:text-[#666666] focus:outline-none focus:border-[#FF6B35]"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="creator-channel"
-                      className="block text-xs font-mono-tabular text-[#AAAAAA] mb-1.5"
+                      className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
                     >
                       Channel Link or Handle
                     </label>
@@ -1140,7 +1050,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       value={clientChannel}
                       onChange={(e) => setClientChannel(e.target.value)}
                       placeholder="e.g., @alexcreates"
-                      className="w-full px-3.5 py-2.5 text-sm bg-[#0f0f0f] border border-white/15 rounded-lg text-white placeholder:text-[#666666] focus:outline-none focus:border-[#FF6B35]"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
                     />
                   </div>
                 </div>
@@ -1148,49 +1058,60 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <div>
                   <label
                     htmlFor="project-notes"
-                    className="block text-xs font-mono-tabular text-[#AAAAAA] mb-1.5"
+                    className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
                   >
-                    Editing Style Reference or Goals
+                    Editing Style Reference or Goals And Other Niche You Want
                   </label>
                   <textarea
                     id="project-notes"
                     rows={2}
                     value={projectNotes}
                     onChange={(e) => setProjectNotes(e.target.value)}
-                    placeholder="Tell me about your raw footage, target retention goals, or reference videos..."
-                    className="w-full px-3.5 py-2 text-sm bg-[#0f0f0f] border border-white/15 rounded-lg text-white placeholder:text-[#666666] focus:outline-none focus:border-[#FF6B35]"
+                    placeholder="Tell me about your raw footage, talking head / documentary / speed ramp goals..."
+                    className="w-full px-3.5 py-2 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
                   />
                 </div>
 
-                {/* Generated Brief Preview & Actions */}
                 <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => handleCopyText('project-brief', generatedBriefText)}
-                    className="px-5 py-3 text-sm font-semibold bg-[#FF6B35] text-black rounded-md hover:bg-[#E85A2C] transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                    className="px-5 py-3 text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
                   >
                     {copiedKey === 'project-brief' ? (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Brief Copied! Paste in Instagram DM</span>
+                        <span>Brief Copied!</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-4 h-4" />
-                        <span>Copy Project Brief for DM</span>
+                        <span>Copy Project Brief</span>
                       </>
                     )}
                   </button>
 
-                  <a
-                    href={SOCIAL_LINKS.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-3 text-sm font-semibold text-white bg-[#0066FF] hover:bg-[#0055CC] rounded-md transition-colors inline-flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <span>Message @deergh_hadiyal on Instagram</span>
-                    <ArrowUpRight className="w-4 h-4" />
-                  </a>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={`mailto:${SOCIAL_LINKS.email}?subject=${encodeURIComponent(
+                        `Video Editing Inquiry — ${selectedFormatTag}`
+                      )}&body=${encodeURIComponent(generatedBriefText)}`}
+                      className="px-5 py-3 text-sm font-semibold text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <Mail className="w-4 h-4 text-[#FF6A32]" />
+                      <span>Email Deergh</span>
+                    </a>
+
+                    <a
+                      href={SOCIAL_LINKS.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-3 text-sm font-semibold text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <span>Instagram DM</span>
+                      <ArrowUpRight className="w-4 h-4 text-[#FF6A32]" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1198,16 +1119,22 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         </section>
       </main>
 
-      {/* Quiet Editorial Footer */}
-      <footer className="bg-[#0f0f0f] border-t border-[#FF6B35]/15 py-8 px-6 text-center text-xs text-[#666666] no-print">
+      {/* Footer */}
+      <footer className="bg-[#070707] border-t border-white/[0.08] py-8 px-6 text-center text-xs text-[#929292] no-print">
         <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 Deergh Hadiyal · Video Editor &amp; Content Creator · All rights reserved</p>
-          <div className="flex items-center gap-6 text-[#999999]">
+          <p>© 2026 Deergh Hadiyal | Video Editor &amp; Content Creator | All rights reserved</p>
+          <div className="flex flex-wrap items-center justify-center gap-6 text-[#D6D6D6]">
+            <a
+              href={`mailto:${SOCIAL_LINKS.email}`}
+              className="hover:text-[#FF6A32] transition-colors"
+            >
+              {SOCIAL_LINKS.email}
+            </a>
             <a
               href={SOCIAL_LINKS.youtubeChannel}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#FF6B35] transition-colors"
+              className="hover:text-[#FF6A32] transition-colors"
             >
               YouTube (@deerghhadiyal)
             </a>
@@ -1215,7 +1142,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               href={SOCIAL_LINKS.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#FF6B35] transition-colors"
+              className="hover:text-[#FF6A32] transition-colors"
             >
               Instagram (@deergh_hadiyal)
             </a>
@@ -1223,7 +1150,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         </div>
       </footer>
 
-      {/* Fullscreen Lightbox Modal for Video Showcase & Timeline Breakdown */}
+      {/* Fullscreen Lightbox Modal for 9:16 Portrait Video Showcase & Timeline Breakdown */}
       {selectedVideo && (
         <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print"
@@ -1231,12 +1158,11 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
           aria-modal="true"
           aria-label={selectedVideo.title}
         >
-          <div className="w-full max-w-[1040px] bg-[#141414] border border-[#FF6B35]/30 rounded-2xl overflow-hidden shadow-2xl my-auto">
-            {/* Modal Top Bar */}
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-4 bg-[#0f0f0f]">
+          <div className="w-full max-w-[1040px] bg-[#0B0B0C] border border-white/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-4 bg-[#070707]">
               <div className="min-w-0">
-                <div className="text-xs font-mono-tabular text-[#FF6B35]">
-                  {selectedVideo.categoryLabel} · {selectedVideo.resolution} · {selectedVideo.fps}
+                <div className="text-xs font-mono-tabular text-[#FF6A32]">
+                  {selectedVideo.categoryLabel} · 16:9 Widescreen · {selectedVideo.fps}
                 </div>
                 <h3 className="font-display text-lg sm:text-xl font-bold text-white truncate">
                   {selectedVideo.title}
@@ -1245,17 +1171,20 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               <button
                 type="button"
                 onClick={() => setSelectedVideo(null)}
-                className="p-2 text-[#CCCCCC] hover:text-white bg-white/5 hover:bg-white/15 rounded-lg transition-colors cursor-pointer shrink-0"
+                className="p-2 text-[#D6D6D6] hover:text-white bg-white/5 hover:bg-white/15 rounded-lg transition-colors cursor-pointer shrink-0"
                 aria-label="Close video inspector"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Media Player / Interactive NLE View */}
             <div className="grid grid-cols-1 lg:grid-cols-12">
-              <div className="lg:col-span-8 bg-black flex flex-col justify-between">
-                <div className="relative aspect-video overflow-hidden">
+              {/* Left 7 Cols: 16:9 Widescreen Player */}
+              <div className="lg:col-span-7 bg-black flex flex-col items-center justify-center p-5">
+                <div
+                  style={{ aspectRatio: '16 / 9' }}
+                  className="relative w-full aspect-video rounded-[18px] overflow-hidden border border-white/15 shadow-2xl bg-[#070707]"
+                >
                   {customEmbeds[selectedVideo.id] ? (
                     <iframe
                       src={customEmbeds[selectedVideo.id]}
@@ -1266,118 +1195,61 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                     />
                   ) : (
                     <>
-                      <ResilientImage
-                        src={selectedVideo.thumbnail}
-                        alt={selectedVideo.title}
-                        className="w-full h-full object-cover transition-all duration-300"
-                        style={{ filter: selectedVideo.colorFilterGraded }}
+                      <video
+                        src={selectedVideo.videoSrc}
+                        poster={selectedVideo.thumbnail}
+                        autoPlay
+                        muted={isMutedPreview}
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 pointer-events-none" />
 
-                      {/* Active Timeline Marker Callout Overlay */}
-                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-white">
-                        <span className="bg-black/75 px-3 py-1.5 rounded border border-white/10">
-                          {selectedVideo.timelineMarkers[activeMarkerIdx]?.time} —{' '}
-                          <strong className="text-[#FF6B35]">
-                            {selectedVideo.timelineMarkers[activeMarkerIdx]?.label}
-                          </strong>
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular text-white">
+                        <span className="bg-black/75 px-2.5 py-1 rounded-full border border-white/10">
+                          16:9 MASTER
                         </span>
                         <button
                           type="button"
                           onClick={() => setIsMutedPreview((m) => !m)}
-                          className="p-2 bg-black/75 rounded border border-white/10 text-white hover:text-[#FF6B35] cursor-pointer"
-                          aria-label={isMutedPreview ? 'Unmute preview' : 'Mute preview'}
+                          className="p-2 bg-black/75 rounded-full border border-white/10 text-white hover:text-[#FF6A32] cursor-pointer"
+                          aria-label={isMutedPreview ? 'Unmute video' : 'Mute video'}
                         >
                           {isMutedPreview ? (
-                            <VolumeX className="w-4 h-4" />
+                            <VolumeX className="w-3.5 h-3.5" />
                           ) : (
-                            <Volume2 className="w-4 h-4 text-[#FF6B35]" />
+                            <Volume2 className="w-3.5 h-3.5 text-[#FF6A32]" />
                           )}
                         </button>
                       </div>
 
-                      {/* Bottom Active Cut Explanation */}
-                      <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-                        <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6B35] mb-1">
-                          <span>Active Cut Breakdown</span>
-                          <span>
-                            3s Hook: {selectedVideo.hookRate} · Retention:{' '}
-                            {selectedVideo.avgRetention}
-                          </span>
+                      <div className="absolute bottom-3 left-3 right-3 bg-black/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 pointer-events-none">
+                        <div className="text-[10px] font-mono-tabular text-[#FF6A32] mb-0.5">
+                          {selectedVideo.timelineMarkers[activeMarkerIdx]?.time} ·{' '}
+                          {selectedVideo.timelineMarkers[activeMarkerIdx]?.label}
                         </div>
-                        <p className="text-sm text-white">
+                        <p className="text-xs text-white leading-snug">
                           {selectedVideo.timelineMarkers[activeMarkerIdx]?.detail}
                         </p>
                       </div>
                     </>
                   )}
                 </div>
-
-                {/* Interactive Timeline Scrubber Bar */}
-                <div className="p-4 bg-[#0f0f0f] border-t border-white/10 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsPlayingPreview((p) => !p)}
-                      className="px-3 py-1.5 text-xs font-mono-tabular font-semibold bg-[#FF6B35] text-black rounded cursor-pointer whitespace-nowrap"
-                    >
-                      {isPlayingPreview ? 'Pause Playhead' : 'Play Timeline'}
-                    </button>
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#FF6B35] transition-all duration-150"
-                        style={{ width: `${playheadProgress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-mono-tabular text-[#AAAAAA]">
-                      {selectedVideo.duration}
-                    </span>
-                  </div>
-
-                  {/* Live YouTube Video URL Embedder */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-white/10">
-                    <input
-                      type="text"
-                      value={customYoutubeInput}
-                      onChange={(e) => setCustomYoutubeInput(e.target.value)}
-                      placeholder="Paste any YouTube Video or Short URL from @deerghhadiyal to embed live..."
-                      className="flex-1 px-3 py-1.5 text-xs bg-[#141414] border border-white/15 rounded text-white placeholder:text-[#666666] focus:outline-none focus:border-[#FF6B35]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleApplyCustomEmbed(selectedVideo.id)}
-                      className="px-3.5 py-1.5 text-xs font-semibold bg-[#0066FF] text-white rounded hover:bg-[#0055CC] transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      Load YouTube Video
-                    </button>
-                    {customEmbeds[selectedVideo.id] && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCustomEmbeds((prev) => {
-                            const next = { ...prev };
-                            delete next[selectedVideo.id];
-                            return next;
-                          })
-                        }
-                        className="px-3 py-1.5 text-xs text-[#CCCCCC] hover:text-white bg-white/10 rounded cursor-pointer whitespace-nowrap"
-                      >
-                        Reset View
-                      </button>
-                    )}
-                  </div>
-                </div>
               </div>
 
-              {/* Right 4 Cols: Cut-by-Cut Timeline Breakdown */}
-              <div className="lg:col-span-4 p-6 bg-[#141414] border-l border-white/10 flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="text-xs font-mono-tabular text-[#FF6B35] mb-1">
-                    Frame-Accurate Anatomy
+              {/* Right 5 Cols: Cut-by-Cut Timeline Breakdown & Live Video Embedder */}
+              <div className="lg:col-span-5 p-6 bg-[#0B0B0C] border-l border-white/10 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-xs font-mono-tabular text-[#FF6A32] mb-1">
+                      Frame-Accurate 16:9 Anatomy · Hook: {selectedVideo.hookRate} · Retention:{' '}
+                      {selectedVideo.avgRetention}
+                    </div>
+                    <h4 className="font-display text-lg font-bold text-white">
+                      Retention Timeline Markers
+                    </h4>
                   </div>
-                  <h4 className="font-display text-lg font-bold text-white mb-4">
-                    Retention Timeline Markers
-                  </h4>
 
                   <div className="space-y-2.5">
                     {selectedVideo.timelineMarkers.map((marker, idx) => (
@@ -1390,45 +1262,74 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         }}
                         className={`w-full text-left p-3.5 rounded-xl border transition-colors cursor-pointer ${
                           activeMarkerIdx === idx
-                            ? 'bg-[#FF6B35]/15 border-[#FF6B35]'
-                            : 'bg-[#0f0f0f] border-white/10 hover:border-white/25'
+                            ? 'bg-[#FF6A32]/10 border-[#FF6A32] text-white'
+                            : 'bg-[#111214] border-white/10 text-[#D6D6D6] hover:border-white/25'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-xs font-mono-tabular mb-1">
-                          <span className="text-[#FF6B35] font-semibold">{marker.time}</span>
-                          <span className="text-[#AAAAAA]">Cut 0{idx + 1}</span>
+                        <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-1">
+                          <span>{marker.time}</span>
+                          <span>Cut 0{idx + 1}</span>
                         </div>
-                        <div className="text-sm font-semibold text-white mb-1">{marker.label}</div>
-                        <p className="text-xs text-[#999999] leading-relaxed">{marker.detail}</p>
+                        <div className="text-sm font-semibold text-white mb-1">
+                          {marker.label}
+                        </div>
+                        <div className="text-xs text-[#929292] leading-relaxed">
+                          {marker.detail}
+                        </div>
                       </button>
                     ))}
                   </div>
+
+                  {/* Scrubber & Custom YouTube Short URL Loader */}
+                  <div className="pt-3 border-t border-white/10 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsPlayingPreview((p) => !p)}
+                        className="px-3 py-1.5 text-xs font-mono-tabular font-semibold bg-[#FF6A32] text-[#070707] rounded cursor-pointer whitespace-nowrap"
+                      >
+                        {isPlayingPreview ? 'Pause Scrubber' : 'Resume Scrubber'}
+                      </button>
+                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#FF6A32] transition-all duration-150"
+                          style={{ width: `${playheadProgress}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono-tabular text-[#929292]">
+                        {selectedVideo.duration}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={customYoutubeInput}
+                        onChange={(e) => setCustomYoutubeInput(e.target.value)}
+                        placeholder="Paste any YouTube Short URL from @deerghhadiyal..."
+                        className="flex-1 px-3 py-1.5 text-xs bg-[#111214] border border-white/15 rounded text-white placeholder:text-[#929292]/60 focus:outline-none focus:border-[#FF6A32]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleApplyCustomEmbed(selectedVideo.id)}
+                        className="px-3.5 py-1.5 text-xs font-semibold bg-[#FF6A32] text-[#070707] rounded hover:bg-[#FF9A62] transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        Load 9:16 Short
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/10 space-y-2.5">
+                <div className="pt-4 border-t border-white/10">
                   <a
                     href={selectedVideo.defaultYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-2.5 px-4 text-xs font-semibold bg-[#FF6B35] text-black rounded-md hover:bg-[#E85A2C] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="w-full py-2.5 px-4 text-xs font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center justify-center gap-1.5"
                   >
-                    <span>Watch Channel on YouTube</span>
+                    <span>Watch Full Channel on YouTube (@deerghhadiyal)</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const title = selectedVideo.categoryLabel;
-                      setSelectedVideo(null);
-                      setSelectedServiceType(
-                        title === 'HACKS EDIT Series' ? 'Short-Form Editing' : title
-                      );
-                      scrollToSection('contact');
-                    }}
-                    className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    Request Similar Edit Style
-                  </button>
                 </div>
               </div>
             </div>
@@ -1436,85 +1337,88 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         </div>
       )}
 
-      {/* Printable / Previewable Portfolio Dossier Modal */}
+      {/* Printable / Downloadable Portfolio Dossier Preview Modal */}
       {isDossierOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Deergh Hadiyal Professional Portfolio Dossier"
+          aria-label="Deergh Hadiyal Portfolio Dossier"
         >
-          <div className="w-full max-w-[880px] bg-[#141414] border border-[#0066FF]/40 rounded-2xl overflow-hidden shadow-2xl my-auto">
-            {/* Modal Action Header */}
-            <div className="px-6 py-4 bg-[#0f0f0f] border-b border-white/10 flex flex-wrap items-center justify-between gap-4 no-print">
-              <div className="text-xs font-mono-tabular text-[#0066FF]">
-                Deergh_Hadiyal_Portfolio.pdf · Interactive Dossier Preview
+          <div className="w-full max-w-[860px] bg-[#0B0B0C] border border-white/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
+            <div className="px-6 py-4 bg-[#070707] border-b border-white/10 flex items-center justify-between gap-4 no-print">
+              <div className="text-xs font-mono-tabular text-[#FF6A32]">
+                DEERGH_HADIYAL_PORTFOLIO.PDF · PRINT &amp; DOWNLOAD VIEW
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleTriggerDossierDownload}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#0066FF] text-white rounded hover:bg-[#0055CC] transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download File</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#FF6B35] text-black rounded hover:bg-[#E85A2C] transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print / Save as PDF</span>
                 </button>
                 <button
                   type="button"
+                  onClick={handleTriggerDossierDownload}
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#FF6A32] hover:bg-[#FF9A62] text-[#070707] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download File</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsDossierOpen(false)}
-                  className="p-1.5 text-[#CCCCCC] hover:text-white bg-white/5 rounded cursor-pointer"
-                  aria-label="Close portfolio preview"
+                  className="p-1.5 text-[#D6D6D6] hover:text-white bg-white/5 rounded-lg cursor-pointer"
+                  aria-label="Close dossier preview"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Dossier Content Sheet */}
-            <div className="p-8 sm:p-12 space-y-8 text-left max-h-[80vh] overflow-y-auto">
-              <div className="border-b border-white/15 pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="p-8 sm:p-10 space-y-8 max-h-[80vh] overflow-y-auto">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-white/10 pb-6">
                 <div>
                   <h2 className="font-display text-3xl font-bold text-white">DEERGH HADIYAL</h2>
-                  <p className="text-lg text-[#FF6B35] font-semibold">
-                    Short-Form Video Editing That Gets Results
+                  <p className="text-base text-[#FF6A32] font-semibold mt-1">
+                    Video Editor &amp; Content Creator
                   </p>
                 </div>
-                <div className="text-xs font-mono-tabular text-[#AAAAAA] space-y-1 sm:text-right">
+                <div className="text-xs font-mono-tabular text-[#929292] space-y-1 sm:text-right">
+                  <div>Email: {SOCIAL_LINKS.email}</div>
                   <div>YouTube: youtube.com/@deerghhadiyal</div>
-                  <div>Series: HACKS EDIT (@deerghhadiyal)</div>
                   <div>Instagram: instagram.com/deergh_hadiyal</div>
                 </div>
               </div>
 
-              <p className="text-sm text-[#CCCCCC] leading-relaxed">
-                Professional video editor specializing in high-performing Reels, TikToks, and
-                Shorts. I transform raw clips into engaging, algorithm-optimized content that
-                captures attention and drives real growth.
-              </p>
+              <div>
+                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6A32] mb-2">
+                  Executive Summary
+                </h3>
+                <p className="text-sm text-[#D6D6D6] leading-relaxed">
+                  Professional video editor specializing in 9:16 Talking Head edits, Documentary
+                  storytelling, Speed Ramp car edits, CapCut &amp; After Effects hybrid workflows,
+                  and high-performing Sports Brand Pages / HACKS EDIT viral content.
+                </p>
+              </div>
 
               <div>
-                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6B35] mb-4">
-                  Core Editing &amp; Post-Production Services
+                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6A32] mb-3">
+                  Core Services
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {SERVICES.map((s) => (
                     <div
                       key={s.index}
-                      className="p-4 rounded-lg bg-[#0f0f0f] border border-white/10"
+                      className="p-4 rounded-xl bg-[#111214] border border-white/10"
                     >
                       <div className="text-sm font-bold text-white mb-1">
                         {s.index}. {s.title}
                       </div>
-                      <p className="text-xs text-[#999999] mb-2">{s.description}</p>
-                      <div className="text-[11px] font-mono-tabular text-[#FF6B35]">
+                      <p className="text-xs text-[#929292] mb-2">{s.description}</p>
+                      <div className="text-[11px] font-mono-tabular text-[#FF9A62]">
                         {s.deliverables}
                       </div>
                     </div>
@@ -1522,24 +1426,19 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6B35] mb-3">
-                  Technical Stack &amp; Specializations
-                </h3>
-                <div className="space-y-2 text-xs text-[#CCCCCC]">
-                  <div>
-                    <strong className="text-white">Software:</strong> Adobe Premiere Pro · DaVinci
-                    Resolve · After Effects · Adobe Audition
-                  </div>
-                  <div>
-                    <strong className="text-white">Specializations:</strong> Short-Form Video ·
-                    YouTube Optimization · TikTok/Reels Strategy · Motion Graphics · Color Grading ·
-                    Sound Design
-                  </div>
-                  <div>
-                    <strong className="text-white">Platforms:</strong> YouTube · Instagram · TikTok
-                    · Snapchat · Twitter · LinkedIn
-                  </div>
+              <div className="border-t border-white/10 pt-6 text-xs text-[#929292] space-y-2">
+                <div>
+                  <strong className="text-[#FF6A32]">Software:</strong> Adobe Premiere Pro · DaVinci
+                  Resolve · After Effects · CapCut Pro · Adobe Audition
+                </div>
+                <div>
+                  <strong className="text-[#FF6A32]">Specializations:</strong> Talking Head ·
+                  Documentary · Speed Ramp · Car Edit · HACKS EDIT &amp; Sports Brand Page ·
+                  Short-Form Video (9:16) · Motion Graphics · Color Grading
+                </div>
+                <div>
+                  <strong className="text-[#FF6A32]">Platforms:</strong> YouTube · Instagram ·
+                  TikTok · Snapchat · Twitter · LinkedIn
                 </div>
               </div>
             </div>
