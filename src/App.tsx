@@ -17,6 +17,7 @@ import {
   RotateCw,
 } from 'lucide-react';
 import HeroVideoCarousel, { CircularPortraitOrbit } from './components/HeroVideoCarousel';
+import CursorEnvironment from './components/CursorEnvironment';
 import {
   portfolioVideos,
   SOCIAL_LINKS,
@@ -75,11 +76,11 @@ function ResilientImage({ src, alt, className = '', style, fallbackLabel }: Resi
   if (hasError) {
     return (
       <div
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#111214] via-[#0B0B0C] to-[#070707] text-center p-6 ${className}`}
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#332D26] via-[#151311] to-[#151311] text-center p-6 ${className}`}
         style={style}
       >
-        <Film className="w-8 h-8 text-[#FF6A32] mb-2 opacity-80" />
-        <span className="text-xs font-medium text-[#D6D6D6]">{fallbackLabel || alt}</span>
+        <Film className="w-8 h-8 text-[#E4AE58] mb-2 opacity-80" />
+        <span className="text-xs font-medium text-[#F2EEE6]">{fallbackLabel || alt}</span>
       </div>
     );
   }
@@ -95,7 +96,6 @@ function ResilientImage({ src, alt, className = '', style, fallbackLabel }: Resi
     />
   );
 }
-
 export default function App() {
   const [activeVideoFilter, setActiveVideoFilter] = useState<
     'all' | 'hacks-edit' | 'car-speed' | 'sports-brand' | 'documentary'
@@ -137,6 +137,82 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'main h1, main h2, main h3, main p, main button, main a, main [role="button"], main .grid > *, main .space-y-3 > *, main .space-y-6 > *, main .space-y-8 > *, main article > div'
+      )
+    ).filter((target) => {
+      return !target.closest('.perspective-stage') && !target.style.transform && !target.style.opacity;
+    });
+    const candidateSet = new Set(candidates);
+    const targets = candidates.filter((target) => {
+      if (!target.matches('h1, h2, h3, p, button, a, [role="button"]')) return true;
+
+      let ancestor = target.parentElement;
+      while (ancestor && ancestor.tagName !== 'MAIN') {
+        if (candidateSet.has(ancestor)) return false;
+        ancestor = ancestor.parentElement;
+      }
+      return true;
+    });
+    targets.sort((first, second) => {
+      return first.getBoundingClientRect().top - second.getBoundingClientRect().top;
+    });
+
+    targets.forEach((target) => {
+      const siblingIndex = Array.from(target.parentElement?.children || []).indexOf(target);
+      target.dataset.scrollReveal = 'pending';
+      target.dataset.revealDelay = String(Math.min(siblingIndex, 3) * 36);
+    });
+
+    const revealTarget = (target: HTMLElement) => {
+      target.classList.add('is-revealed');
+      target.animate(
+        [
+          { opacity: 0, transform: 'translate3d(0, 10px, 0)' },
+          { opacity: 1, transform: 'translate3d(0, 0, 0)' },
+        ],
+        {
+          duration: 3000,
+          delay: Number(target.dataset.revealDelay) || 0,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        }
+      );
+      delete target.dataset.scrollReveal;
+      delete target.dataset.revealDelay;
+    };
+
+    let nextTargetIndex = 0;
+    const revealVisibleTargets = () => {
+      while (nextTargetIndex < targets.length) {
+        const target = targets[nextTargetIndex];
+        if (target.dataset.scrollReveal !== 'pending') {
+          nextTargetIndex += 1;
+          continue;
+        }
+
+        const bounds = target.getBoundingClientRect();
+        if (bounds.top > window.innerHeight + 120) break;
+
+        nextTargetIndex += 1;
+        if (bounds.bottom > 0) revealTarget(target);
+      }
+    };
+
+    revealVisibleTargets();
+    const handleScroll = () => revealVisibleTargets();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   // Subtle playhead movement when lightbox preview is active
   useEffect(() => {
     if (!selectedVideo || !isPlayingPreview) return;
@@ -150,6 +226,34 @@ export default function App() {
     activeVideoFilter === 'all'
       ? VIDEO_SHOWCASE
       : VIDEO_SHOWCASE.filter((v) => v.category === activeVideoFilter);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement;
+          if (entry.isIntersecting) {
+            if (!video.src) {
+              video.poster = video.dataset.poster || '';
+              video.src = video.dataset.src || '';
+            }
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      },
+      { rootMargin: '180px 0px', threshold: 0.1 }
+    );
+
+    document.querySelectorAll<HTMLVideoElement>('[data-showcase-video]').forEach((video) => {
+      observer.observe(video);
+    });
+
+    return () => observer.disconnect();
+  }, [activeVideoFilter, customEmbeds]);
 
   const handleCopyText = (key: string, text: string) => {
     navigator.clipboard?.writeText(text);
@@ -176,7 +280,10 @@ export default function App() {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth';
+      el.scrollIntoView({ behavior });
     }
   };
 
@@ -194,51 +301,52 @@ export default function App() {
 ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel / Handle: ${clientChannel}\n` : ''}${projectNotes ? `• Project Details: ${projectNotes}` : ''}`.trim();
 
   return (
-    <div className="min-h-screen bg-[#070707] text-[#D6D6D6] flex flex-col">
+    <div className="min-h-screen bg-[#151311] text-[#F2EEE6] flex flex-col">
+      <CursorEnvironment />
       {/* Header: Sticky Studio Top Bar */}
-      <header className="sticky top-0 z-40 bg-[#070707]/90 backdrop-blur-xl border-b border-white/[0.08] px-6 py-4 no-print">
+      <header className="sticky top-0 z-40 bg-[#151311]/90 backdrop-blur-xl border-b border-[#E4AE58]/[0.08] px-6 py-4 no-print">
         <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-6">
           <a
             href="#"
-            className="font-display text-xl font-extrabold tracking-tight text-white hover:text-[#FF6A32] transition-colors whitespace-nowrap"
+            className="font-display text-xl font-extrabold tracking-tight text-[#F2EEE6] hover:text-[#E4AE58] transition-colors whitespace-nowrap"
           >
-            DEERGH<span className="text-[#FF6A32]">.</span>
+            DEERGH<span className="text-[#E4AE58]">.</span>
           </a>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#D6D6D6]">
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#F2EEE6]">
             <a
               href="#services"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Services
             </a>
             <a
               href="#portfolio"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Portfolio
             </a>
             <a
               href="#videos"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Videos
             </a>
             <a
               href="#process"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Work Process
             </a>
             <a
               href="#skills"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Skills
             </a>
             <a
               href="#contact"
-              className="hover:text-[#FF6A32] transition-colors duration-150 whitespace-nowrap"
+              className="hover:text-[#E4AE58] transition-colors duration-400 whitespace-nowrap"
             >
               Contact
             </a>
@@ -248,7 +356,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             <button
               type="button"
               onClick={() => scrollToSection('contact')}
-              className="px-5 py-2 text-xs sm:text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-5 py-2 text-xs sm:text-sm font-semibold bg-[#E4AE58] text-[#151311] rounded-lg hover:bg-[#C9BFAF] transition-colors duration-400 whitespace-nowrap shrink-0 cursor-pointer"
             >
               START A PROJECT ↗
             </button>
@@ -268,18 +376,18 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         <div className="section-divider-glow" aria-hidden="true" />
 
         {/* Experience & Core Formats Strip (Talking Head, Documentary, Speed Ramp, Car Edit, CapCut, HACKS & Sports Brand Page) */}
-        <section className="py-12 px-6 bg-[#070707] border-b border-white/[0.06]">
+        <section className="py-12 px-6 bg-[#151311] border-b border-[#E4AE58]/[0.06]">
           <div className="max-w-[1200px] mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
-                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-1.5">
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58] mb-1.5">
                   Specialized 9:16 &amp; Cinematic Formats
                 </p>
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-white">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F2EEE6]">
                   Experience Across DIFFERENT NICHES
                 </h2>
               </div>
-              <span className="text-xs font-mono-tabular text-[#929292]">
+              <span className="text-xs font-mono-tabular text-[#C9BFAF]">
                 Premiere Pro • After Effects • DaVinci Resolve • CapCut
               </span>
             </div>
@@ -301,17 +409,17 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       scrollToSection('contact');
                     }
                   }}
-                  className="group p-5 rounded-2xl bg-[#0B0B0C] border border-white/[0.07] hover:border-[#FF6A32]/40 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                  className="group p-5 rounded-2xl bg-[#332D26] border border-[#E4AE58]/[0.07] hover:border-[#E4AE58]/40 transition-all duration-350 cursor-pointer flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-2">
+                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#E4AE58] mb-2">
                       <span>{exp.code}</span>
                       <ArrowUpRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </div>
-                    <h3 className="font-display text-lg font-bold text-white group-hover:text-[#FF9A62] transition-colors mb-1.5">
+                    <h3 className="font-display text-lg font-bold text-[#F2EEE6] group-hover:text-[#C9BFAF] transition-colors mb-1.5">
                       {exp.title}
                     </h3>
-                    <p className="text-xs sm:text-sm text-[#929292] leading-relaxed">
+                    <p className="text-xs sm:text-sm text-[#C9BFAF] leading-relaxed">
                       {exp.detail}
                     </p>
                   </div>
@@ -322,16 +430,16 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         </section>
 
         {/* Services Section (#services) */}
-        <section id="services" className="py-20 px-6 bg-[#070707]">
+        <section id="services" className="py-20 px-6 bg-[#151311]">
           <div className="max-w-[1200px] mx-auto">
             <div className="max-w-2xl mb-12">
-              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58] mb-2">
                 Services &amp; Capabilities
               </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6]">
                 Services
               </h2>
-              <p className="text-sm sm:text-base text-[#929292] mt-3 leading-relaxed">
+              <p className="text-sm sm:text-base text-[#C9BFAF] mt-3 leading-relaxed">
                 Every 9:16 vertical frame is cut with platform algorithms and viewer psychology in
                 mind—from talking-head hooks and documentary narratives to high-velocity car speed
                 ramps.
@@ -355,43 +463,43 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       scrollToSection('contact');
                     }
                   }}
-                  className="group bg-[#0B0B0C] border border-white/[0.08] hover:border-[#FF6A32]/45 hover:bg-[#111214] rounded-2xl p-7 transition-all duration-200 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+                  className="group bg-[#332D26] border border-[#E4AE58]/[0.08] hover:border-[#E4AE58]/45 hover:bg-[#332D26] rounded-2xl p-7 transition-all duration-350 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-baseline justify-between mb-4">
-                      <span className="font-mono-tabular text-sm font-semibold text-[#FF6A32]">
+                      <span className="font-mono-tabular text-sm font-semibold text-[#E4AE58]">
                         {service.index}.
                       </span>
-                      <span className="font-mono-tabular text-xs text-[#929292]">
+                      <span className="font-mono-tabular text-xs text-[#C9BFAF]">
                         {service.turnaround}
                       </span>
                     </div>
-                    <h3 className="font-display text-xl font-bold text-white mb-2.5 group-hover:text-[#FF9A62] transition-colors">
+                    <h3 className="font-display text-xl font-bold text-[#F2EEE6] mb-2.5 group-hover:text-[#C9BFAF] transition-colors">
                       {service.title}
                     </h3>
-                    <p className="text-sm text-[#929292] leading-relaxed mb-6">
+                    <p className="text-sm text-[#C9BFAF] leading-relaxed mb-6">
                       {service.description}
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-white/[0.07] flex items-center justify-between gap-2 text-xs text-[#D6D6D6]">
+                  <div className="pt-4 border-t border-[#E4AE58]/[0.07] flex items-center justify-between gap-2 text-xs text-[#F2EEE6]">
                     <span className="truncate">{service.deliverables}</span>
-                    <ArrowUpRight className="w-4 h-4 text-[#FF6A32] shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    <ArrowUpRight className="w-4 h-4 text-[#E4AE58] shrink-0 transition-transform duration-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Why Choose Me Strip */}
-            <div className="mt-16 bg-[#0B0B0C] border border-white/[0.08] border-l-4 border-l-[#FF6A32] rounded-2xl p-8 sm:p-10">
+            <div className="mt-16 bg-[#332D26] border border-[#E4AE58]/[0.08] border-l-4 border-l-[#E4AE58] rounded-2xl p-8 sm:p-10">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
                 <div>
-                  <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF9A62] mb-1">
+                  <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#C9BFAF] mb-1">
                     The Studio Standard
                   </p>
-                  <h3 className="font-display text-2xl font-bold text-white">Why Choose Me</h3>
+                  <h3 className="font-display text-2xl font-bold text-[#F2EEE6]">Why Choose Me</h3>
                 </div>
-                <p className="text-xs font-mono-tabular text-[#929292]">
+                <p className="text-xs font-mono-tabular text-[#C9BFAF]">
                   YouTube Shorts · TikTok · Instagram Reels · Snapchat
                 </p>
               </div>
@@ -400,15 +508,15 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 {WHY_CHOOSE_ME.map((item) => (
                   <div key={item.title} className="space-y-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <h4 className="text-base font-semibold text-white">
-                        <span className="text-[#FF6A32] font-mono-tabular mr-2">✓</span>
+                      <h4 className="text-base font-semibold text-[#F2EEE6]">
+                        <span className="text-[#E4AE58] font-mono-tabular mr-2">✓</span>
                         {item.title}
                       </h4>
-                      <span className="text-xs font-mono-tabular text-[#FF9A62] whitespace-nowrap">
+                      <span className="text-xs font-mono-tabular text-[#C9BFAF] whitespace-nowrap">
                         {item.metric}
                       </span>
                     </div>
-                    <p className="text-sm text-[#929292] leading-relaxed pl-5">
+                    <p className="text-sm text-[#C9BFAF] leading-relaxed pl-5">
                       {item.description}
                     </p>
                   </div>
@@ -421,23 +529,23 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         <div className="section-divider-glow" aria-hidden="true" />
 
         {/* My Professional Portfolio PDF / Dossier Section (#portfolio) */}
-        <section id="portfolio" className="py-20 px-6 bg-[#0B0B0C]">
+        <section id="portfolio" className="py-20 px-6 bg-[#151311]">
           <div className="max-w-[900px] mx-auto text-center">
-            <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+            <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58] mb-2">
               Credentials &amp; Capabilities Deck
             </p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-6">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6] mb-6">
               My Professional Portfolio
             </h2>
 
-            <div className="bg-[#111214] border border-white/10 hover:border-[#FF6A32]/40 transition-colors rounded-2xl p-8 sm:p-12 max-w-[640px] mx-auto shadow-2xl">
-              <div className="text-xs font-mono-tabular text-[#FF9A62] mb-3">
+            <div className="bg-[#332D26] border border-[#E4AE58]/10 hover:border-[#E4AE58]/40 transition-colors rounded-2xl p-8 sm:p-12 max-w-[640px] mx-auto shadow-2xl">
+              <div className="text-xs font-mono-tabular text-[#C9BFAF] mb-3">
                 DEERGH_HADIYAL_PORTFOLIO · STUDIO DOSSIER
               </div>
-              <h3 className="font-display text-2xl font-bold text-white mb-3">
+              <h3 className="font-display text-2xl font-bold text-[#F2EEE6] mb-3">
                 Download My Portfolio
               </h3>
-              <p className="text-sm sm:text-base text-[#929292] leading-relaxed mb-8">
+              <p className="text-sm sm:text-base text-[#C9BFAF] leading-relaxed mb-8">
                 Access my complete professional portfolio showcasing my services, expertise in
                 Talking Head, Documentary, Speed Ramp, Car Edits, CapCut &amp; After Effects, and
                 contact information. Perfect for sharing with potential clients and collaborators.
@@ -447,7 +555,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <button
                   type="button"
                   onClick={handleTriggerDossierDownload}
-                  className="px-6 py-3.5 text-sm font-semibold bg-[#FF6A32] hover:bg-[#FF9A62] text-[#070707] rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
+                  className="px-6 py-3.5 text-sm font-semibold bg-[#E4AE58] hover:bg-[#C9BFAF] text-[#151311] rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
                 >
                   {dossierDownloaded ? (
                     <>
@@ -465,9 +573,9 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <button
                   type="button"
                   onClick={() => setIsDossierOpen(true)}
-                  className="px-6 py-3.5 text-sm font-semibold bg-white/[0.04] text-white border border-white/15 hover:border-[#FF6A32]/50 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
+                  className="px-6 py-3.5 text-sm font-semibold bg-[#F2EEE6]/[0.04] text-[#F2EEE6] border border-[#E4AE58]/15 hover:border-[#E4AE58]/50 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
                 >
-                  <Eye className="w-4 h-4 text-[#FF6A32]" />
+                  <Eye className="w-4 h-4 text-[#E4AE58]" />
                   <span>Preview &amp; Print PDF</span>
                 </button>
               </div>
@@ -483,23 +591,23 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
           className="py-20 px-6 relative overflow-hidden"
           style={{
             background: `
-              radial-gradient(circle at 50% 28%, rgba(255, 106, 50, 0.14), transparent 46%),
-              #070707
+              radial-gradient(circle at 50% 28%, rgba(228, 174, 88, 0.14), transparent 46%),
+              #151311
             `,
           }}
         >
           <div className="max-w-[1320px] mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-6">
               <div className="max-w-2xl">
-                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58] mb-2">
                   9:16 Vertical Showreel &amp; Interactive Orbit
                 </p>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6]">
                   Video Showcase
                 </h2>
-                <p className="text-sm sm:text-base text-[#929292] mt-3 leading-relaxed">
+                <p className="text-sm sm:text-base text-[#C9BFAF] mt-3 leading-relaxed">
                   Explore my 9:16 portrait edits from the{' '}
-                  <span className="text-white font-medium">HACKS EDIT</span> channel, Talking Head
+                  <span className="text-[#F2EEE6] font-medium">HACKS EDIT</span> channel, Talking Head
                   reels, Speed Ramp Car Edits, Sports Brand Pages, and Vertical Documentaries.
                   Hover over any orbiting 9:16 card to smoothly zoom in (1.22x) while the circular
                   motion continues.
@@ -511,13 +619,13 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <button
                   type="button"
                   onClick={() => setShowcaseOrbitDirection((d) => (d === 1 ? -1 : 1))}
-                  className="px-3.5 py-2 text-xs font-mono-tabular font-medium bg-[#0B0B0C] hover:bg-[#111214] text-[#D6D6D6] hover:text-white border border-white/10 hover:border-[#FF6A32]/50 rounded-xl inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 text-xs font-mono-tabular font-medium bg-[#151311] hover:bg-[#332D26] text-[#F2EEE6] hover:text-[#F2EEE6] border border-[#E4AE58]/10 hover:border-[#E4AE58]/50 rounded-xl inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <RotateCw className="w-3.5 h-3.5 text-[#FF6A32]" />
+                  <RotateCw className="w-3.5 h-3.5 text-[#E4AE58]" />
                   <span>Reverse Orbit</span>
                 </button>
 
-                <div className="flex flex-wrap items-center gap-1 p-1 bg-[#0B0B0C] border border-white/10 rounded-xl">
+                <div className="flex flex-wrap items-center gap-1 p-1 bg-[#151311] border border-[#E4AE58]/10 rounded-xl">
                   {(
                     [
                       { id: 'all', label: 'All 9:16 Reels' },
@@ -531,10 +639,10 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveVideoFilter(tab.id)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-400 whitespace-nowrap cursor-pointer ${
                         activeVideoFilter === tab.id
-                          ? 'bg-[#FF6A32] text-[#070707] font-semibold'
-                          : 'text-[#929292] hover:text-white'
+                          ? 'bg-[#E4AE58] text-[#151311] font-semibold'
+                          : 'text-[#C9BFAF] hover:text-[#F2EEE6]'
                       }`}
                     >
                       {tab.label}
@@ -575,16 +683,16 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         ? 'scale3d(1.03, 1.03, 1) translate3d(0, -4px, 0)'
                         : 'scale3d(1, 1, 1)',
                       transition:
-                        'transform 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 350ms ease, filter 350ms ease, border-color 350ms ease',
+                        'transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms ease, filter 350ms ease, border-color 350ms ease',
                       opacity: isCardDimmed ? 0.65 : 1,
                       zIndex: isCardHovered ? 30 : 1,
                     }}
-                    className="group relative rounded-[22px] overflow-hidden bg-[#0B0B0C] border border-white/[0.09] hover:border-[#FF6A32]/60 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85)] flex flex-col justify-between"
+                    className="group relative rounded-[22px] overflow-hidden bg-[#332D26] border border-[#E4AE58]/[0.09] hover:border-[#E4AE58]/60 shadow-[0_20px_50px_-15px_rgba(21, 19, 17,0.85)] flex flex-col justify-between"
                   >
                     {/* 16:9 Widescreen Video Container */}
                     <div
                       style={{ aspectRatio: '16 / 9' }}
-                      className="relative w-full aspect-video bg-black overflow-hidden"
+                      className="relative w-full aspect-video bg-[#151311] overflow-hidden"
                     >
                       {activeEmbedUrl ? (
                         <iframe
@@ -612,40 +720,40 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                           className="w-full h-full relative cursor-pointer"
                         >
                           <video
-                            src={video.videoSrc}
-                            poster={video.thumbnail}
-                            autoPlay
+                            data-showcase-video
+                            data-src={video.videoSrc}
+                            data-poster={video.thumbnail}
                             muted
                             loop
                             playsInline
-                            preload="metadata"
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                            preload="none"
+                            className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-[1.06]"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/30" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#151311]/90 via-[#151311]/25 to-[#151311]/30" />
 
                           {/* Top 16:9 Metadata Badge */}
-                          <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between text-[11px] font-mono-tabular text-white/90">
-                            <span className="bg-black/65 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 truncate max-w-[75%]">
+                          <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between text-[11px] font-mono-tabular text-[#F2EEE6]/90">
+                            <span className="bg-[#151311]/65 backdrop-blur-md px-3 py-1 rounded-full border border-[#E4AE58]/15 truncate max-w-[75%]">
                               {video.categoryLabel}
                             </span>
-                            <span className="bg-[#FF6A32] text-[#070707] font-bold px-2.5 py-0.5 rounded-full">
+                            <span className="bg-[#E4AE58] text-[#151311] font-bold px-2.5 py-0.5 rounded-full">
                               16:9
                             </span>
                           </div>
 
                           {/* Center Play / Inspect Button */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-14 h-14 rounded-full bg-[#FF6A32]/95 text-[#070707] flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110">
-                              <Play className="w-6 h-6 fill-[#070707] ml-0.5" />
+                            <div className="w-14 h-14 rounded-full bg-[#E4AE58]/95 text-[#151311] flex items-center justify-center shadow-lg transition-transform duration-400 group-hover:scale-110">
+                              <Play className="w-6 h-6 fill-[#151311] ml-0.5" />
                             </div>
                           </div>
 
                           {/* Bottom Hook & Retention Metrics Inside 16:9 Frame */}
-                          <div className="absolute bottom-3.5 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-[#FF9A62]">
-                            <span className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded border border-white/10">
+                          <div className="absolute bottom-3.5 left-4 right-4 flex items-center justify-between text-xs font-mono-tabular text-[#C9BFAF]">
+                            <span className="bg-[#151311]/60 backdrop-blur-sm px-2.5 py-1 rounded border border-[#E4AE58]/10">
                               3s Hook: {video.hookRate}
                             </span>
-                            <span className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded border border-white/10">
+                            <span className="bg-[#151311]/60 backdrop-blur-sm px-2.5 py-1 rounded border border-[#E4AE58]/10">
                               Retention: {video.avgRetention}
                             </span>
                           </div>
@@ -661,18 +769,18 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       }}
                       className="p-6 space-y-2.5 cursor-pointer"
                     >
-                      <h3 className="font-display text-lg sm:text-xl font-bold text-white leading-snug group-hover:text-[#FF9A62] transition-colors">
+                      <h3 className="font-display text-lg sm:text-xl font-bold text-[#F2EEE6] leading-snug group-hover:text-[#C9BFAF] transition-colors">
                         {video.title}
                       </h3>
-                      <p className="text-xs sm:text-sm text-[#929292] leading-relaxed">
+                      <p className="text-xs sm:text-sm text-[#C9BFAF] leading-relaxed">
                         {video.description}
                       </p>
-                      <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between text-xs font-semibold text-[#FF6A32]">
+                      <div className="pt-3 border-t border-[#E4AE58]/[0.08] flex items-center justify-between text-xs font-semibold text-[#E4AE58]">
                         <span className="inline-flex items-center gap-1.5">
                           <Sliders className="w-3.5 h-3.5" />
                           <span>Inspect Cut Breakdown</span>
                         </span>
-                        <span className="font-mono-tabular text-[#D6D6D6]">{video.duration}</span>
+                        <span className="font-mono-tabular text-[#F2EEE6]">{video.duration}</span>
                       </div>
                     </div>
                   </article>
@@ -681,8 +789,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             </div>
 
             {/* Channel CTA Footer */}
-            <div className="mt-12 pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-[#929292]">
+            <div className="mt-12 pt-8 border-t border-[#E4AE58]/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-sm text-[#C9BFAF]">
                 Want to see more 9:16 Shorts and Reels? Visit my YouTube channel for the complete
                 collection.
               </p>
@@ -690,7 +798,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 href={SOCIAL_LINKS.youtubeChannel}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                className="px-6 py-3 text-sm font-semibold bg-[#E4AE58] text-[#151311] rounded-lg hover:bg-[#C9BFAF] transition-colors inline-flex items-center gap-2 whitespace-nowrap"
               >
                 <span>Visit YouTube Channel (@deerghhadiyal)</span>
                 <ArrowUpRight className="w-4 h-4" />
@@ -702,14 +810,14 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         <div className="section-divider-glow" aria-hidden="true" />
 
         {/* My Work Process & Technical Skills Section (#process & #skills) */}
-        <section id="process" className="py-20 px-6 bg-[#0B0B0C]">
+        <section id="process" className="py-20 px-6 bg-[#151311]">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* Left 7 Cols: My Work Process */}
             <div className="lg:col-span-7">
-              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32] mb-2">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58] mb-2">
                 Post-Production Methodology
               </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-8">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6] mb-8">
                 My Work Process
               </h2>
 
@@ -717,21 +825,21 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 {WORK_PROCESS.map((step) => (
                   <div
                     key={step.index}
-                    className="bg-[#111214] border border-white/[0.08] hover:border-[#FF6A32]/35 transition-colors rounded-2xl p-7"
+                    className="bg-[#332D26] border border-[#E4AE58]/[0.08] hover:border-[#E4AE58]/35 transition-colors rounded-2xl p-7"
                   >
-                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-2">
+                    <div className="flex items-center justify-between text-xs font-mono-tabular text-[#E4AE58] mb-2">
                       <span>
                         {step.index} · {step.label}
                       </span>
-                      <span className="text-[#929292]">{step.targetOutcome}</span>
+                      <span className="text-[#C9BFAF]">{step.targetOutcome}</span>
                     </div>
-                    <h3 className="font-display text-xl font-bold text-white mb-2">
+                    <h3 className="font-display text-xl font-bold text-[#F2EEE6] mb-2">
                       {step.title}
                     </h3>
-                    <p className="text-sm text-[#929292] leading-relaxed mb-4">
+                    <p className="text-sm text-[#C9BFAF] leading-relaxed mb-4">
                       {step.description}
                     </p>
-                    <div className="text-xs font-mono-tabular text-[#D6D6D6] pt-3 border-t border-white/[0.07]">
+                    <div className="text-xs font-mono-tabular text-[#F2EEE6] pt-3 border-t border-[#E4AE58]/[0.07]">
                       Techniques: {step.keyTechniques}
                     </div>
                   </div>
@@ -742,25 +850,25 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             {/* Right 5 Cols: Technical Skills (#skills) */}
             <div id="skills" className="lg:col-span-5 flex flex-col justify-between">
               <div>
-                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF9A62] mb-2">
+                <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#C9BFAF] mb-2">
                   Tools &amp; Ecosystem
                 </p>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-8">
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6] mb-8">
                   Technical Skills
                 </h2>
 
-                <div className="space-y-8 border-t border-white/[0.08] pt-6">
+                <div className="space-y-8 border-t border-[#E4AE58]/[0.08] pt-6">
                   {TECHNICAL_SKILLS.map((group) => (
-                    <div key={group.category} className="border-b border-white/[0.08] pb-6">
-                      <h3 className="text-sm font-mono-tabular font-semibold text-[#FF6A32] mb-2">
+                    <div key={group.category} className="border-b border-[#E4AE58]/[0.08] pb-6">
+                      <h3 className="text-sm font-mono-tabular font-semibold text-[#E4AE58] mb-2">
                         {group.category}
                       </h3>
-                      <p className="text-base text-white leading-relaxed">
+                      <p className="text-base text-[#F2EEE6] leading-relaxed">
                         {group.items.map((item, i) => (
                           <React.Fragment key={item}>
                             <span>{item}</span>
                             {i < group.items.length - 1 && (
-                              <span className="mx-2.5 text-[#FF6A32]" aria-hidden="true">
+                              <span className="mx-2.5 text-[#E4AE58]" aria-hidden="true">
                                 •
                               </span>
                             )}
@@ -772,11 +880,11 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 </div>
               </div>
 
-              <div className="mt-8 p-6 rounded-2xl bg-[#111214] border border-white/[0.08]">
-                <div className="text-xs font-mono-tabular text-[#FF6A32] mb-2">
+              <div className="mt-8 p-6 rounded-2xl bg-[#332D26] border border-[#E4AE58]/[0.08]">
+                <div className="text-xs font-mono-tabular text-[#E4AE58] mb-2">
                   Master Output Standards
                 </div>
-                <p className="text-sm text-[#D6D6D6] leading-relaxed">
+                <p className="text-sm text-[#F2EEE6] leading-relaxed">
                   H.264 / Apple ProRes 422 HQ · 1080x1920 (9:16 Vertical Portrait) · Rec.709 Color
                   Space · -14 LUFS Normalized Stereo Master
                 </p>
@@ -788,17 +896,17 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
         <div className="section-divider-glow" aria-hidden="true" />
 
         {/* Contact Section (#contact) */}
-        <section id="contact" className="py-20 px-6 bg-[#070707]">
+        <section id="contact" className="py-20 px-6 bg-[#151311]">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             {/* Left 5 Cols: Direct Contact & Social Links */}
             <div className="lg:col-span-5 space-y-6">
-              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#FF6A32]">
+              <p className="text-xs font-mono-tabular uppercase tracking-widest text-[#E4AE58]">
                 Direct Channels &amp; Collaborations
               </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F2EEE6]">
                 Let&apos;s Create Together
               </h2>
-              <p className="text-base text-[#929292] leading-relaxed">
+              <p className="text-base text-[#C9BFAF] leading-relaxed">
                 Ready to transform your video content and grow your audience? Reach out through my
                 email or social channels and let&apos;s discuss how I can help take your channel to
                 the next level.
@@ -844,17 +952,17 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 ].map((channel) => (
                   <div
                     key={channel.id}
-                    className="flex items-center justify-between gap-3 p-4 rounded-xl bg-[#0B0B0C] border border-white/[0.08] hover:border-[#FF6A32]/40 transition-colors"
+                    className="flex items-center justify-between gap-3 p-4 rounded-xl bg-[#332D26] border border-[#E4AE58]/[0.08] hover:border-[#E4AE58]/40 transition-colors"
                   >
                     <div className="min-w-0">
-                      <div className="text-xs text-[#929292]">{channel.label}</div>
+                      <div className="text-xs text-[#C9BFAF]">{channel.label}</div>
                       <a
                         href={channel.href}
                         target={channel.href.startsWith('mailto:') ? undefined : '_blank'}
                         rel={
                           channel.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'
                         }
-                        className="text-sm sm:text-base font-semibold text-white hover:text-[#FF6A32] truncate block transition-colors"
+                        className="text-sm sm:text-base font-semibold text-[#F2EEE6] hover:text-[#E4AE58] truncate block transition-colors"
                       >
                         {channel.value}
                       </a>
@@ -864,12 +972,12 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       <button
                         type="button"
                         onClick={() => handleCopyText(channel.id, channel.copyValue)}
-                        className="px-3 py-1.5 text-xs font-medium text-[#D6D6D6] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                        className="px-3 py-1.5 text-xs font-medium text-[#F2EEE6] hover:text-[#F2EEE6] bg-[#F2EEE6]/[0.05] hover:bg-[#F2EEE6]/[0.1] rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                       >
                         {copiedKey === channel.id ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-[#FF6A32]" />
-                            <span className="text-[#FF6A32]">Copied</span>
+                            <Check className="w-3.5 h-3.5 text-[#E4AE58]" />
+                            <span className="text-[#E4AE58]">Copied</span>
                           </>
                         ) : (
                           <>
@@ -884,7 +992,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         rel={
                           channel.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'
                         }
-                        className="p-2 text-[#D6D6D6] hover:text-white bg-white/[0.05] hover:bg-white/[0.1] rounded-md transition-colors"
+                        className="p-2 text-[#F2EEE6] hover:text-[#F2EEE6] bg-[#F2EEE6]/[0.05] hover:bg-[#F2EEE6]/[0.1] rounded-md transition-colors"
                         aria-label={`Open ${channel.label}`}
                       >
                         {channel.href.startsWith('mailto:') ? (
@@ -900,24 +1008,24 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             </div>
 
             {/* Right 7 Cols: Interactive Project Brief Builder */}
-            <div className="lg:col-span-7 bg-[#0B0B0C] border border-white/10 rounded-2xl p-6 sm:p-8">
+            <div className="lg:col-span-7 bg-[#332D26] border border-[#E4AE58]/10 rounded-2xl p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <div className="text-xs font-mono-tabular text-[#FF6A32]">
+                  <div className="text-xs font-mono-tabular text-[#E4AE58]">
                     Interactive Project Planner
                   </div>
-                  <h3 className="font-display text-2xl font-bold text-white">
+                  <h3 className="font-display text-2xl font-bold text-[#F2EEE6]">
                     Start a Project With Deergh
                   </h3>
                 </div>
-                <span className="text-xs font-mono-tabular text-[#929292]">
+                <span className="text-xs font-mono-tabular text-[#C9BFAF]">
                   Email &amp; Instagram DM Ready
                 </span>
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                  <label className="block text-xs font-mono-tabular text-[#C9BFAF] mb-2">
                     01. Select Editing Format
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -928,8 +1036,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setSelectedFormatTag(exp.title)}
                         className={`px-3 py-2.5 text-xs font-medium rounded-lg border text-left transition-colors cursor-pointer truncate ${
                           selectedFormatTag === exp.title
-                            ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
-                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                            ? 'bg-[#E4AE58] text-[#151311] border-[#E4AE58] font-semibold'
+                            : 'bg-[#332D26] text-[#F2EEE6] border-[#E4AE58]/10 hover:border-[#E4AE58]/25'
                         }`}
                       >
                         {exp.title}
@@ -939,7 +1047,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                  <label className="block text-xs font-mono-tabular text-[#C9BFAF] mb-2">
                     02. Select Primary Service
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -950,8 +1058,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setSelectedServiceType(s.title)}
                         className={`px-3 py-2.5 text-xs font-medium rounded-lg border text-left transition-colors cursor-pointer truncate ${
                           selectedServiceType === s.title
-                            ? 'bg-white text-[#070707] border-white font-semibold'
-                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                            ? 'bg-[#F2EEE6] text-[#151311] border-[#E4AE58] font-semibold'
+                            : 'bg-[#332D26] text-[#F2EEE6] border-[#E4AE58]/10 hover:border-[#E4AE58]/25'
                         }`}
                       >
                         {s.title}
@@ -962,7 +1070,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                    <label className="block text-xs font-mono-tabular text-[#C9BFAF] mb-2">
                       03. Monthly Video Volume
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -979,8 +1087,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                           onClick={() => setMonthlyVolume(opt.val)}
                           className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                             monthlyVolume === opt.val
-                              ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
-                              : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                              ? 'bg-[#E4AE58] text-[#151311] border-[#E4AE58] font-semibold'
+                              : 'bg-[#332D26] text-[#F2EEE6] border-[#E4AE58]/10 hover:border-[#E4AE58]/25'
                           }`}
                         >
                           {opt.label}
@@ -990,7 +1098,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono-tabular text-[#929292] mb-2">
+                    <label className="block text-xs font-mono-tabular text-[#C9BFAF] mb-2">
                       04. Delivery Cadence
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -999,8 +1107,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setTurnaroundSpeed('standard')}
                         className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                           turnaroundSpeed === 'standard'
-                            ? 'bg-white text-[#070707] border-white font-semibold'
-                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                            ? 'bg-[#F2EEE6] text-[#151311] border-[#E4AE58] font-semibold'
+                            : 'bg-[#332D26] text-[#F2EEE6] border-[#E4AE58]/10 hover:border-[#E4AE58]/25'
                         }`}
                       >
                         24–48h Standard
@@ -1010,8 +1118,8 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         onClick={() => setTurnaroundSpeed('priority')}
                         className={`py-2 px-3 text-xs font-mono-tabular rounded-lg border transition-colors cursor-pointer whitespace-nowrap ${
                           turnaroundSpeed === 'priority'
-                            ? 'bg-[#FF6A32] text-[#070707] border-[#FF6A32] font-semibold'
-                            : 'bg-[#111214] text-[#D6D6D6] border-white/10 hover:border-white/25'
+                            ? 'bg-[#E4AE58] text-[#151311] border-[#E4AE58] font-semibold'
+                            : 'bg-[#332D26] text-[#F2EEE6] border-[#E4AE58]/10 hover:border-[#E4AE58]/25'
                         }`}
                       >
                         24h Express
@@ -1024,7 +1132,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   <div>
                     <label
                       htmlFor="creator-name"
-                      className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
+                      className="block text-xs font-mono-tabular text-[#C9BFAF] mb-1.5"
                     >
                       Your Name / Brand
                     </label>
@@ -1034,13 +1142,13 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="e.g., Alex Rivera"
-                      className="w-full px-3.5 py-2.5 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#332D26] border border-[#E4AE58]/10 rounded-lg text-[#F2EEE6] placeholder:text-[#C9BFAF]/50 focus:outline-none focus:border-[#E4AE58]"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="creator-channel"
-                      className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
+                      className="block text-xs font-mono-tabular text-[#C9BFAF] mb-1.5"
                     >
                       Channel Link or Handle
                     </label>
@@ -1050,7 +1158,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       value={clientChannel}
                       onChange={(e) => setClientChannel(e.target.value)}
                       placeholder="e.g., @alexcreates"
-                      className="w-full px-3.5 py-2.5 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
+                      className="w-full px-3.5 py-2.5 text-sm bg-[#332D26] border border-[#E4AE58]/10 rounded-lg text-[#F2EEE6] placeholder:text-[#C9BFAF]/50 focus:outline-none focus:border-[#E4AE58]"
                     />
                   </div>
                 </div>
@@ -1058,7 +1166,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <div>
                   <label
                     htmlFor="project-notes"
-                    className="block text-xs font-mono-tabular text-[#929292] mb-1.5"
+                    className="block text-xs font-mono-tabular text-[#C9BFAF] mb-1.5"
                   >
                     Editing Style Reference or Goals And Other Niche You Want
                   </label>
@@ -1068,15 +1176,15 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                     value={projectNotes}
                     onChange={(e) => setProjectNotes(e.target.value)}
                     placeholder="Tell me about your raw footage, talking head / documentary / speed ramp goals..."
-                    className="w-full px-3.5 py-2 text-sm bg-[#111214] border border-white/10 rounded-lg text-white placeholder:text-[#929292]/50 focus:outline-none focus:border-[#FF6A32]"
+                    className="w-full px-3.5 py-2 text-sm bg-[#332D26] border border-[#E4AE58]/10 rounded-lg text-[#F2EEE6] placeholder:text-[#C9BFAF]/50 focus:outline-none focus:border-[#E4AE58]"
                   />
                 </div>
 
-                <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <div className="pt-4 border-t border-[#E4AE58]/10 flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => handleCopyText('project-brief', generatedBriefText)}
-                    className="px-5 py-3 text-sm font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                    className="px-5 py-3 text-sm font-semibold bg-[#E4AE58] text-[#151311] rounded-lg hover:bg-[#C9BFAF] transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
                   >
                     {copiedKey === 'project-brief' ? (
                       <>
@@ -1096,9 +1204,9 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       href={`mailto:${SOCIAL_LINKS.email}?subject=${encodeURIComponent(
                         `Video Editing Inquiry — ${selectedFormatTag}`
                       )}&body=${encodeURIComponent(generatedBriefText)}`}
-                      className="px-5 py-3 text-sm font-semibold text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                      className="px-5 py-3 text-sm font-semibold text-[#F2EEE6] bg-[#F2EEE6]/[0.06] hover:bg-[#F2EEE6]/[0.12] border border-[#E4AE58]/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
                     >
-                      <Mail className="w-4 h-4 text-[#FF6A32]" />
+                      <Mail className="w-4 h-4 text-[#E4AE58]" />
                       <span>Email Deergh</span>
                     </a>
 
@@ -1106,10 +1214,10 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                       href={SOCIAL_LINKS.instagramUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-5 py-3 text-sm font-semibold text-white bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
+                      className="px-5 py-3 text-sm font-semibold text-[#F2EEE6] bg-[#F2EEE6]/[0.06] hover:bg-[#F2EEE6]/[0.12] border border-[#E4AE58]/15 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap"
                     >
                       <span>Instagram DM</span>
-                      <ArrowUpRight className="w-4 h-4 text-[#FF6A32]" />
+                      <ArrowUpRight className="w-4 h-4 text-[#E4AE58]" />
                     </a>
                   </div>
                 </div>
@@ -1120,13 +1228,13 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#070707] border-t border-white/[0.08] py-8 px-6 text-center text-xs text-[#929292] no-print">
+      <footer className="bg-[#151311] border-t border-[#E4AE58]/[0.08] py-8 px-6 text-center text-xs text-[#C9BFAF] no-print">
         <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 Deergh Hadiyal | Video Editor &amp; Content Creator | All rights reserved</p>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-[#D6D6D6]">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-[#F2EEE6]">
             <a
               href={`mailto:${SOCIAL_LINKS.email}`}
-              className="hover:text-[#FF6A32] transition-colors"
+              className="hover:text-[#E4AE58] transition-colors"
             >
               {SOCIAL_LINKS.email}
             </a>
@@ -1134,7 +1242,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               href={SOCIAL_LINKS.youtubeChannel}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#FF6A32] transition-colors"
+              className="hover:text-[#E4AE58] transition-colors"
             >
               YouTube (@deerghhadiyal)
             </a>
@@ -1142,7 +1250,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               href={SOCIAL_LINKS.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#FF6A32] transition-colors"
+              className="hover:text-[#E4AE58] transition-colors"
             >
               Instagram (@deergh_hadiyal)
             </a>
@@ -1153,25 +1261,25 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
       {/* Fullscreen Lightbox Modal for 9:16 Portrait Video Showcase & Timeline Breakdown */}
       {selectedVideo && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print"
+          className="fixed inset-0 z-50 bg-[#151311]/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print"
           role="dialog"
           aria-modal="true"
           aria-label={selectedVideo.title}
         >
-          <div className="w-full max-w-[1040px] bg-[#0B0B0C] border border-white/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-4 bg-[#070707]">
+          <div className="w-full max-w-[1040px] bg-[#151311] border border-[#E4AE58]/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
+            <div className="px-6 py-4 border-b border-[#E4AE58]/10 flex items-center justify-between gap-4 bg-[#151311]">
               <div className="min-w-0">
-                <div className="text-xs font-mono-tabular text-[#FF6A32]">
+                <div className="text-xs font-mono-tabular text-[#E4AE58]">
                   {selectedVideo.categoryLabel} · 16:9 Widescreen · {selectedVideo.fps}
                 </div>
-                <h3 className="font-display text-lg sm:text-xl font-bold text-white truncate">
+                <h3 className="font-display text-lg sm:text-xl font-bold text-[#F2EEE6] truncate">
                   {selectedVideo.title}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedVideo(null)}
-                className="p-2 text-[#D6D6D6] hover:text-white bg-white/5 hover:bg-white/15 rounded-lg transition-colors cursor-pointer shrink-0"
+                className="p-2 text-[#F2EEE6] hover:text-[#F2EEE6] bg-[#F2EEE6]/5 hover:bg-[#F2EEE6]/15 rounded-lg transition-colors cursor-pointer shrink-0"
                 aria-label="Close video inspector"
               >
                 <X className="w-5 h-5" />
@@ -1180,10 +1288,10 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
 
             <div className="grid grid-cols-1 lg:grid-cols-12">
               {/* Left 7 Cols: 16:9 Widescreen Player */}
-              <div className="lg:col-span-7 bg-black flex flex-col items-center justify-center p-5">
+              <div className="lg:col-span-7 bg-[#151311] flex flex-col items-center justify-center p-5">
                 <div
                   style={{ aspectRatio: '16 / 9' }}
-                  className="relative w-full aspect-video rounded-[18px] overflow-hidden border border-white/15 shadow-2xl bg-[#070707]"
+                  className="relative w-full aspect-video rounded-[18px] overflow-hidden border border-[#E4AE58]/15 shadow-2xl bg-[#151311]"
                 >
                   {customEmbeds[selectedVideo.id] ? (
                     <iframe
@@ -1204,32 +1312,32 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         playsInline
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#151311]/85 via-transparent to-[#151311]/30 pointer-events-none" />
 
-                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular text-white">
-                        <span className="bg-black/75 px-2.5 py-1 rounded-full border border-white/10">
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular text-[#F2EEE6]">
+                        <span className="bg-[#151311]/75 px-2.5 py-1 rounded-full border border-[#E4AE58]/10">
                           16:9 MASTER
                         </span>
                         <button
                           type="button"
                           onClick={() => setIsMutedPreview((m) => !m)}
-                          className="p-2 bg-black/75 rounded-full border border-white/10 text-white hover:text-[#FF6A32] cursor-pointer"
+                          className="p-2 bg-[#151311]/75 rounded-full border border-[#E4AE58]/10 text-[#F2EEE6] hover:text-[#E4AE58] cursor-pointer"
                           aria-label={isMutedPreview ? 'Unmute video' : 'Mute video'}
                         >
                           {isMutedPreview ? (
                             <VolumeX className="w-3.5 h-3.5" />
                           ) : (
-                            <Volume2 className="w-3.5 h-3.5 text-[#FF6A32]" />
+                            <Volume2 className="w-3.5 h-3.5 text-[#E4AE58]" />
                           )}
                         </button>
                       </div>
 
-                      <div className="absolute bottom-3 left-3 right-3 bg-black/80 backdrop-blur-sm border border-white/10 rounded-xl p-3 pointer-events-none">
-                        <div className="text-[10px] font-mono-tabular text-[#FF6A32] mb-0.5">
+                      <div className="absolute bottom-3 left-3 right-3 bg-[#151311]/80 backdrop-blur-sm border border-[#E4AE58]/10 rounded-xl p-3 pointer-events-none">
+                        <div className="text-[10px] font-mono-tabular text-[#E4AE58] mb-0.5">
                           {selectedVideo.timelineMarkers[activeMarkerIdx]?.time} ·{' '}
                           {selectedVideo.timelineMarkers[activeMarkerIdx]?.label}
                         </div>
-                        <p className="text-xs text-white leading-snug">
+                        <p className="text-xs text-[#F2EEE6] leading-snug">
                           {selectedVideo.timelineMarkers[activeMarkerIdx]?.detail}
                         </p>
                       </div>
@@ -1239,14 +1347,14 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               </div>
 
               {/* Right 5 Cols: Cut-by-Cut Timeline Breakdown & Live Video Embedder */}
-              <div className="lg:col-span-5 p-6 bg-[#0B0B0C] border-l border-white/10 flex flex-col justify-between space-y-6">
+              <div className="lg:col-span-5 p-6 bg-[#151311] border-l border-[#E4AE58]/10 flex flex-col justify-between space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <div className="text-xs font-mono-tabular text-[#FF6A32] mb-1">
+                    <div className="text-xs font-mono-tabular text-[#E4AE58] mb-1">
                       Frame-Accurate 16:9 Anatomy · Hook: {selectedVideo.hookRate} · Retention:{' '}
                       {selectedVideo.avgRetention}
                     </div>
-                    <h4 className="font-display text-lg font-bold text-white">
+                    <h4 className="font-display text-lg font-bold text-[#F2EEE6]">
                       Retention Timeline Markers
                     </h4>
                   </div>
@@ -1262,18 +1370,18 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         }}
                         className={`w-full text-left p-3.5 rounded-xl border transition-colors cursor-pointer ${
                           activeMarkerIdx === idx
-                            ? 'bg-[#FF6A32]/10 border-[#FF6A32] text-white'
-                            : 'bg-[#111214] border-white/10 text-[#D6D6D6] hover:border-white/25'
+                            ? 'bg-[#E4AE58]/10 border-[#E4AE58] text-[#F2EEE6]'
+                            : 'bg-[#332D26] border-[#E4AE58]/10 text-[#F2EEE6] hover:border-[#E4AE58]/25'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-xs font-mono-tabular text-[#FF6A32] mb-1">
+                        <div className="flex items-center justify-between text-xs font-mono-tabular text-[#E4AE58] mb-1">
                           <span>{marker.time}</span>
                           <span>Cut 0{idx + 1}</span>
                         </div>
-                        <div className="text-sm font-semibold text-white mb-1">
+                        <div className="text-sm font-semibold text-[#F2EEE6] mb-1">
                           {marker.label}
                         </div>
-                        <div className="text-xs text-[#929292] leading-relaxed">
+                        <div className="text-xs text-[#C9BFAF] leading-relaxed">
                           {marker.detail}
                         </div>
                       </button>
@@ -1281,22 +1389,22 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
 
                   {/* Scrubber & Custom YouTube Short URL Loader */}
-                  <div className="pt-3 border-t border-white/10 space-y-3">
+                  <div className="pt-3 border-t border-[#E4AE58]/10 space-y-3">
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setIsPlayingPreview((p) => !p)}
-                        className="px-3 py-1.5 text-xs font-mono-tabular font-semibold bg-[#FF6A32] text-[#070707] rounded cursor-pointer whitespace-nowrap"
+                        className="px-3 py-1.5 text-xs font-mono-tabular font-semibold bg-[#E4AE58] text-[#151311] rounded cursor-pointer whitespace-nowrap"
                       >
                         {isPlayingPreview ? 'Pause Scrubber' : 'Resume Scrubber'}
                       </button>
-                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-[#F2EEE6]/10 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#FF6A32] transition-all duration-150"
+                          className="h-full bg-[#E4AE58] transition-all duration-400"
                           style={{ width: `${playheadProgress}%` }}
                         />
                       </div>
-                      <span className="text-xs font-mono-tabular text-[#929292]">
+                      <span className="text-xs font-mono-tabular text-[#C9BFAF]">
                         {selectedVideo.duration}
                       </span>
                     </div>
@@ -1307,12 +1415,12 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                         value={customYoutubeInput}
                         onChange={(e) => setCustomYoutubeInput(e.target.value)}
                         placeholder="Paste any YouTube Short URL from @deerghhadiyal..."
-                        className="flex-1 px-3 py-1.5 text-xs bg-[#111214] border border-white/15 rounded text-white placeholder:text-[#929292]/60 focus:outline-none focus:border-[#FF6A32]"
+                        className="flex-1 px-3 py-1.5 text-xs bg-[#332D26] border border-[#E4AE58]/15 rounded text-[#F2EEE6] placeholder:text-[#C9BFAF]/60 focus:outline-none focus:border-[#E4AE58]"
                       />
                       <button
                         type="button"
                         onClick={() => handleApplyCustomEmbed(selectedVideo.id)}
-                        className="px-3.5 py-1.5 text-xs font-semibold bg-[#FF6A32] text-[#070707] rounded hover:bg-[#FF9A62] transition-colors cursor-pointer whitespace-nowrap"
+                        className="px-3.5 py-1.5 text-xs font-semibold bg-[#E4AE58] text-[#151311] rounded hover:bg-[#C9BFAF] transition-colors cursor-pointer whitespace-nowrap"
                       >
                         Load 9:16 Short
                       </button>
@@ -1320,12 +1428,12 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-[#E4AE58]/10">
                   <a
                     href={selectedVideo.defaultYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-2.5 px-4 text-xs font-semibold bg-[#FF6A32] text-[#070707] rounded-lg hover:bg-[#FF9A62] transition-colors inline-flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 px-4 text-xs font-semibold bg-[#E4AE58] text-[#151311] rounded-lg hover:bg-[#C9BFAF] transition-colors inline-flex items-center justify-center gap-1.5"
                   >
                     <span>Watch Full Channel on YouTube (@deerghhadiyal)</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -1340,21 +1448,21 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
       {/* Printable / Downloadable Portfolio Dossier Preview Modal */}
       {isDossierOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-[#151311]/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-label="Deergh Hadiyal Portfolio Dossier"
         >
-          <div className="w-full max-w-[860px] bg-[#0B0B0C] border border-white/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
-            <div className="px-6 py-4 bg-[#070707] border-b border-white/10 flex items-center justify-between gap-4 no-print">
-              <div className="text-xs font-mono-tabular text-[#FF6A32]">
+          <div className="w-full max-w-[860px] bg-[#151311] border border-[#E4AE58]/15 rounded-2xl overflow-hidden shadow-2xl my-auto">
+            <div className="px-6 py-4 bg-[#151311] border-b border-[#E4AE58]/10 flex items-center justify-between gap-4 no-print">
+              <div className="text-xs font-mono-tabular text-[#E4AE58]">
                 DEERGH_HADIYAL_PORTFOLIO.PDF · PRINT &amp; DOWNLOAD VIEW
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#F2EEE6]/10 hover:bg-[#F2EEE6]/20 text-[#F2EEE6] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print / Save as PDF</span>
@@ -1362,7 +1470,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <button
                   type="button"
                   onClick={handleTriggerDossierDownload}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#FF6A32] hover:bg-[#FF9A62] text-[#070707] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-[#E4AE58] hover:bg-[#C9BFAF] text-[#151311] rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download File</span>
@@ -1370,7 +1478,7 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 <button
                   type="button"
                   onClick={() => setIsDossierOpen(false)}
-                  className="p-1.5 text-[#D6D6D6] hover:text-white bg-white/5 rounded-lg cursor-pointer"
+                  className="p-1.5 text-[#F2EEE6] hover:text-[#F2EEE6] bg-[#F2EEE6]/5 rounded-lg cursor-pointer"
                   aria-label="Close dossier preview"
                 >
                   <X className="w-5 h-5" />
@@ -1379,14 +1487,14 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
             </div>
 
             <div className="p-8 sm:p-10 space-y-8 max-h-[80vh] overflow-y-auto">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-white/10 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#E4AE58]/10 pb-6">
                 <div>
-                  <h2 className="font-display text-3xl font-bold text-white">DEERGH HADIYAL</h2>
-                  <p className="text-base text-[#FF6A32] font-semibold mt-1">
+                  <h2 className="font-display text-3xl font-bold text-[#F2EEE6]">DEERGH HADIYAL</h2>
+                  <p className="text-base text-[#E4AE58] font-semibold mt-1">
                     Video Editor &amp; Content Creator
                   </p>
                 </div>
-                <div className="text-xs font-mono-tabular text-[#929292] space-y-1 sm:text-right">
+                <div className="text-xs font-mono-tabular text-[#C9BFAF] space-y-1 sm:text-right">
                   <div>Email: {SOCIAL_LINKS.email}</div>
                   <div>YouTube: youtube.com/@deerghhadiyal</div>
                   <div>Instagram: instagram.com/deergh_hadiyal</div>
@@ -1394,10 +1502,10 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               </div>
 
               <div>
-                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6A32] mb-2">
+                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#E4AE58] mb-2">
                   Executive Summary
                 </h3>
-                <p className="text-sm text-[#D6D6D6] leading-relaxed">
+                <p className="text-sm text-[#F2EEE6] leading-relaxed">
                   Professional video editor specializing in 9:16 Talking Head edits, Documentary
                   storytelling, Speed Ramp car edits, CapCut &amp; After Effects hybrid workflows,
                   and high-performing Sports Brand Pages / HACKS EDIT viral content.
@@ -1405,20 +1513,20 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
               </div>
 
               <div>
-                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#FF6A32] mb-3">
+                <h3 className="text-xs font-mono-tabular uppercase tracking-wider text-[#E4AE58] mb-3">
                   Core Services
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {SERVICES.map((s) => (
                     <div
                       key={s.index}
-                      className="p-4 rounded-xl bg-[#111214] border border-white/10"
+                      className="p-4 rounded-xl bg-[#332D26] border border-[#E4AE58]/10"
                     >
-                      <div className="text-sm font-bold text-white mb-1">
+                      <div className="text-sm font-bold text-[#F2EEE6] mb-1">
                         {s.index}. {s.title}
                       </div>
-                      <p className="text-xs text-[#929292] mb-2">{s.description}</p>
-                      <div className="text-[11px] font-mono-tabular text-[#FF9A62]">
+                      <p className="text-xs text-[#C9BFAF] mb-2">{s.description}</p>
+                      <div className="text-[11px] font-mono-tabular text-[#C9BFAF]">
                         {s.deliverables}
                       </div>
                     </div>
@@ -1426,18 +1534,18 @@ ${clientName ? `• Name: ${clientName}\n` : ''}${clientChannel ? `• Channel /
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-6 text-xs text-[#929292] space-y-2">
+              <div className="border-t border-[#E4AE58]/10 pt-6 text-xs text-[#C9BFAF] space-y-2">
                 <div>
-                  <strong className="text-[#FF6A32]">Software:</strong> Adobe Premiere Pro · DaVinci
+                  <strong className="text-[#E4AE58]">Software:</strong> Adobe Premiere Pro · DaVinci
                   Resolve · After Effects · CapCut Pro · Adobe Audition
                 </div>
                 <div>
-                  <strong className="text-[#FF6A32]">Specializations:</strong> Talking Head ·
+                  <strong className="text-[#E4AE58]">Specializations:</strong> Talking Head ·
                   Documentary · Speed Ramp · Car Edit · HACKS EDIT &amp; Sports Brand Page ·
                   Short-Form Video (9:16) · Motion Graphics · Color Grading
                 </div>
                 <div>
-                  <strong className="text-[#FF6A32]">Platforms:</strong> YouTube · Instagram ·
+                  <strong className="text-[#E4AE58]">Platforms:</strong> YouTube · Instagram ·
                   TikTok · Snapchat · Twitter · LinkedIn
                 </div>
               </div>
